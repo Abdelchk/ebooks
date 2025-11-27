@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Inscription</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+</head>
+<body>
+<div th:replace="~{navbar :: navbar}"></div>
+<div class="container">
+    <h2 class="mt-5">Inscription</h2>
+    <form th:action="@{/register}" method="post" class="needs-validation" novalidate="novalidate">
+        <div class="mb-3">
+            <label for="Lastname" class="form-label">Nom</label>
+            <input type="text" class="form-control" id="lastname" name="lastname" pattern="^[a-zA-ZÀ-ÿ\s-]+$" required/>
+            <div class="invalid-feedback">
+                Entrez votre nom.
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="firstname" class="form-label">Prénom</label>
+            <input type="text" class="form-control" id="firstname" name="firstname" pattern="^[a-zA-ZÀ-ÿ\s-]+$" required/>
+            <div class="invalid-feedback">
+                Entrez votre prénom.
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="birthdate" class="form-label">Date de naissance</label>
+            <input type="date" class="form-control" id="birthdate" name="birthdate" required/>
+            <div class="invalid-feedback">
+                Entrez une date de naissance valide.
+            </div>
+        </div>
+        <div class="mb-3">
+		    <label for="phoneNumber" class="form-label">N° de téléphone</label>
+		    <input type="text" class="form-control" id="phoneNumber" name="phoneNumber" pattern="^(0|\\+33|0033)[1-9][0-9]{8}" required/>
+		    <div class="invalid-feedback">
+		        Le numéro de téléphone doit contenir exactement 10 chiffres.
+		    </div>
+		</div>
+		<div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" 
+            pattern="\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}\b" required/>
+            <div class="invalid-feedback">
+                Veuillez saisir un email valide.
+            </div>
+        </div>
+        <select name="questionId" required>
+            <option value="">-- Choisissez une question de sécurité --</option>
+            <option th:each="question : ${questions}"
+                    th:value="${question.id}"
+                    th:text="${question.question}">
+            </option>
+        </select>
+        <input type="text" name="securityAnswer" maxlength="32" required
+               placeholder="Votre réponse" />
+        <div class="mb-3">
+		    <label for="password" class="form-label">Mot de passe</label>
+		    <div class="input-group">
+		        <input type="password" class="form-control" id="password" name="password"
+		        pattern="^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\d)(?=.*[@$!%*?&amp;#])[A-Za-zÀ-ÖØ-öø-ÿ\d@$!%*?&amp;#]{12,}$" required/>
+		        <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+		            <i class="bi bi-eye-fill"></i>
+		        </button>
+		        <div class="invalid-feedback">
+			        Veuillez saisir un mot de passe valide. 12 caractères minimum, au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial.
+			    </div>
+		    </div>
+		</div>
+		<div class="mb-3">
+		    <label for="confirmPassword" class="form-label">Confirmer mot de passe</label>
+		    <div class="input-group">
+		        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required/>
+		        <button type="button" class="btn btn-outline-secondary" id="toggleConfirmPassword">
+		            <i class="bi bi-eye-fill"></i>
+		        </button>
+		        <div class="invalid-feedback">
+			        Les mots de passe ne correspondent pas.
+			    </div>
+		    </div>
+		</div>
+        <button type="submit" class="btn btn-primary">Valider</button>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+	    const form = document.querySelector('.needs-validation');
+	
+	    form.addEventListener('submit', function (event) {
+	        // Bloque si validation HTML5 échoue
+	        if (!form.checkValidity()) {
+	            event.preventDefault();
+	            event.stopPropagation();
+	        }
+	
+	        // Vérifie la cohérence du mot de passe et de la confirmation
+	        const password = document.getElementById('password');
+	        const confirmPassword = document.getElementById('confirmPassword');
+	
+	        if (password.value !== confirmPassword.value) {
+	            confirmPassword.setCustomValidity("Les mots de passe ne correspondent pas");
+	            event.preventDefault();
+	            event.stopPropagation();
+	        } else {
+	            confirmPassword.setCustomValidity(""); // reset si bon
+	        }
+	
+	        form.classList.add('was-validated');
+	    }, false);
+	});
+</script>
+
+<script>
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const passwordField = document.getElementById('password');
+        const icon = this.querySelector('i');
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            passwordField.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    });
+
+    document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
+        const confirmPasswordField = document.getElementById('confirmPassword');
+        const icon = this.querySelector('i');
+        if (confirmPasswordField.type === 'password') {
+            confirmPasswordField.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            confirmPasswordField.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    });
+</script>
+</body>
+</html>

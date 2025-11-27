@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des livres</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div th:replace="~{navbar :: navbar}"></div>
+
+<div class="container mt-4">
+    <h2>Liste des livres</h2>
+
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <div class="row">
+        <div class="col-md-4 d-flex" th:each="book : ${books}">
+            <div class="card mb-3 w-100 h-100 d-flex flex-column">
+                <img th:src="${book.coverImageUrl}" class="card-img-top" alt="Couverture du livre" style="height: 200px; object-fit: cover;">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title" th:text="${book.title}">Titre</h5>
+                    <p class="card-text flex-grow-1" th:text="${book.description}">Description</p>
+                    <p class="card-text"><small class="text-muted">Auteur : <span th:text="${book.author}"></span></small></p>
+                    <p class="card-text"><small class="text-muted">Stock : <span th:text="${book.quantity}"></span></small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
