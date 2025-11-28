@@ -107,6 +107,10 @@
 	        } else {
 	            confirmPassword.setCustomValidity(""); // reset si bon
 	        }
+
+	        const submitBtn = document.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Inscription en cours...';
 	
 	        form.classList.add('was-validated');
 	    }, false);

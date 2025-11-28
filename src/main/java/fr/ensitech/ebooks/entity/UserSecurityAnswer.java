@@ -19,6 +19,6 @@ public class UserSecurityAnswer {
     @JoinColumn(name = "question_id", nullable = false)
     private SecurityQuestions securityQuestion;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 100)
     private String hashedAnswer;
 }

@@ -33,12 +33,27 @@ public class RegistrationController {
             @RequestParam("questionId") Long questionId,
             @RequestParam("securityAnswer") String securityAnswer,
             Model model) {
-    	if (result.hasErrors()) {
-            return "register"; // renvoie au formulaire avec erreurs
+
+        if (result.hasErrors()) {
+            model.addAttribute("questions", userService.getAllSecurityQuestions());
+            return "register";
         }
-        userService.registerNewUserAccount(user, questionId, securityAnswer);
+
+        try {
+            userService.registerNewUserAccount(user, questionId, securityAnswer);
+            return "redirect:/last-step"; // Redirection au lieu de retour direct
+        } catch (Exception e) {
+            model.addAttribute("error", "Erreur lors de l'inscription : " + e.getMessage());
+            model.addAttribute("questions", userService.getAllSecurityQuestions());
+            return "register";
+        }
+    }
+
+    @GetMapping("/last-step")
+    public String showLastStep() {
         return "last-step";
     }
+
 
     @GetMapping("/verify-email")
     public String verifyEmail(@RequestParam("token") String token, Model model) {

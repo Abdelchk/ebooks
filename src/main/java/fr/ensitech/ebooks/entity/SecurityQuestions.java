@@ -1,6 +1,8 @@
 package fr.ensitech.ebooks.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Entity
@@ -12,5 +14,8 @@ public class SecurityQuestions {
     private Long id;
 
     @Column(nullable = false, length = 100)
+    @NotBlank(message = "La question ne peut pas être vide")
+    @Size(max = 255, message = "La question ne doit pas dépasser 100 caractères")
     private String question;
 }
+

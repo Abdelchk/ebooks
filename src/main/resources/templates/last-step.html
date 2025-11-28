@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Vérification Email</title>
+    <title>Vérification de compte</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
 <div th:replace="~{navbar :: navbar}"></div>
 <div class="container">
-    <h2 class="mt-5">Verifier votre adresse email</h2>
+    <h2 class="mt-5">Verifier votre compte</h2>
     <div>
-        <p class="mb-0">Pour finaliser votre inscription, veuillez vérifier votre adresse email. Un lien de vérification a été envoyé à votre adresse email.</p>
+        <p class="mb-0">Pour finaliser votre inscription, veuillez vérifier votre compte. Un lien de vérification a été envoyé à votre adresse email.</p>
     </div>
     <a th:href="@{/login}" class="btn btn-primary">Connexion</a>
 </div>

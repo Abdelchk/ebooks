@@ -71,7 +71,8 @@ public class User {
     
     @Column(nullable = false)
     private boolean enabled;
-    
+
+    @Column(length = 100, nullable = false)
     private String verificationToken;
 	
 }

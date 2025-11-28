@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Vérification du code</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+</head>
+<body>
+<h2>Saisissez le code de vérification</h2>
+
+<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+<div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+<form method="post" th:action="@{/verify-code}">
+    <input type="text" name="code" maxlength="6" required
+           placeholder="Code à 6 chiffres" pattern="[0-9]{6}" />
+    <button type="submit">Valider</button>
+</form>
+
+<form method="post" th:action="@{/resend-code}">
+    <button type="submit">Renvoyer le code</button>
+</form>
+</body>
+</html>
