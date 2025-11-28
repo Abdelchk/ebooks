@@ -48,7 +48,8 @@ public class WebSecurityConfig {
         http
             .authenticationProvider(authProvider())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/register", "/login", "/verify-email", "/last-step", "/css/**", "/js/**").permitAll()
+                .requestMatchers("/register", "/login", "/verify-email", "/last-step",
+                                "/forgot-password", "/reset-password", "/css/**", "/js/**").permitAll()
                 .requestMatchers("/verify-code", "/resend-code").authenticated()
                 .anyRequest().authenticated()
             )

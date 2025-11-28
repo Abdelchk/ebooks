@@ -74,5 +74,21 @@ public class User {
 
     @Column(length = 100, nullable = false)
     private String verificationToken;
-	
+
+    // Historique des 5 derniers mots de passe (séparés par des espaces)
+    @Column(length = 1500, columnDefinition = "varchar(1500) default ''")
+    private String passwordHistory;
+
+    // Date de dernière mise à jour du mot de passe
+    @Column
+    private LocalDate lastPasswordUpdateDate;
+
+    // Token pour la réinitialisation du mot de passe
+    @Column(length = 100)
+    private String resetPasswordToken;
+
+    // Date d'expiration du token de réinitialisation
+    @Column
+    private LocalDate resetTokenExpiryDate;
+
 }

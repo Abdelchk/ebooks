@@ -9,12 +9,14 @@ import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
 import fr.ensitech.ebooks.utils.Dates;
+import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +70,7 @@ public class UserService implements IUserService {
         // Encoder le mot de passe
         user.setPassword(encoder.encode(user.getPassword()));
         user.setEnabled(false);
+        user.setLastPasswordUpdateDate(LocalDate.now()); // Initialiser la date de mise à jour
 
         // Générer le token de vérification
         String token = UUID.randomUUID().toString();
@@ -178,5 +181,185 @@ public class UserService implements IUserService {
         verificationCodeRepository.save(verificationCode);
 
         return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean updatePassword(User user, String oldPassword, String newPassword,
+                                   String confirmPassword, Long questionId, String securityAnswer) {
+        if (user == null) {
+            throw new IllegalArgumentException("Utilisateur invalide");
+        }
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+        // Vérifier l'ancien mot de passe
+        if (!encoder.matches(oldPassword, user.getPassword())) {
+            throw new IllegalArgumentException("L'ancien mot de passe est incorrect");
+        }
+
+        // Vérifier que les nouveaux mots de passe correspondent
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Les mots de passe ne correspondent pas");
+        }
+
+        // Vérifier la question de sécurité
+        if (!verifySecurityAnswer(user, securityAnswer)) {
+            throw new IllegalArgumentException("La réponse à la question de sécurité est incorrecte");
+        }
+
+        // Vérifier la force du nouveau mot de passe
+        if (!newPassword.matches("^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-zÀ-ÖØ-öø-ÿ\\d@$!%*?&#]{12,}$")) {
+            throw new IllegalArgumentException("Le nouveau mot de passe ne respecte pas les critères de sécurité");
+        }
+
+        // Vérifier que le nouveau mot de passe n'est pas identique à l'ancien
+        if (newPassword.equals(oldPassword)) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit être différent de l'ancien mot de passe.");
+        }
+
+        // Vérifier que le nouveau mot de passe n'est pas dans l'historique
+        String currentHistory = user.getPasswordHistory() != null ? user.getPasswordHistory() : "";
+        List<String> passwordHistory = PasswordHistoryTokenizer.tokenize(currentHistory);
+
+        for (String oldHashedPassword : passwordHistory) {
+            if (encoder.matches(newPassword, oldHashedPassword)) {
+                throw new IllegalArgumentException("Ce mot de passe a déjà été utilisé récemment. Veuillez en choisir un autre.");
+            }
+        }
+
+        // Encoder le nouveau mot de passe après toutes les vérifications
+        String hashedNewPassword = encoder.encode(newPassword);
+
+        // Ajouter l'ancien mot de passe à l'historique
+        String updatedHistory = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, user.getPassword());
+
+        // Mettre à jour le mot de passe
+        user.setPassword(hashedNewPassword);
+        user.setPasswordHistory(updatedHistory);
+        user.setLastPasswordUpdateDate(LocalDate.now());
+
+        userRepository.save(user);
+
+        return true;
+    }
+
+    @Override
+    public void initiateForgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Aucun compte n'est associé à cet email"));
+
+        // Générer un token de réinitialisation
+        String token = UUID.randomUUID().toString();
+        user.setResetPasswordToken(token);
+        user.setResetTokenExpiryDate(LocalDate.now().plusDays(1)); // Expire dans 24h
+
+        userRepository.save(user);
+
+        // Envoyer l'email de réinitialisation
+        String resetUrl = "http://localhost:8080/reset-password?token=" + token;
+        emailService.sendEmail(user.getEmail(), "Réinitialisation de mot de passe",
+                "Cliquez sur le lien pour réinitialiser votre mot de passe : " + resetUrl +
+                "\n\nCe lien expire dans 24 heures.");
+    }
+
+    @Override
+    public boolean validateResetToken(String token) {
+        Optional<User> userOpt = userRepository.findByResetPasswordToken(token);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+
+        User user = userOpt.get();
+
+        // Vérifier que le token n'a pas expiré
+        if (user.getResetTokenExpiryDate() == null ||
+            LocalDate.now().isAfter(user.getResetTokenExpiryDate())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean resetPassword(String token, String newPassword, String confirmPassword) {
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Token invalide"));
+
+        // Vérifier que le token n'a pas expiré
+        if (user.getResetTokenExpiryDate() == null ||
+            LocalDate.now().isAfter(user.getResetTokenExpiryDate())) {
+            throw new IllegalArgumentException("Le token a expiré");
+        }
+
+        // Vérifier que les mots de passe correspondent
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Les mots de passe ne correspondent pas");
+        }
+
+        // Vérifier la force du nouveau mot de passe
+        if (!newPassword.matches("^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-zÀ-ÖØ-öø-ÿ\\d@$!%*?&#]{12,}$")) {
+            throw new IllegalArgumentException("Le nouveau mot de passe ne respecte pas les critères de sécurité");
+        }
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+        // Vérifier que le nouveau mot de passe n'est pas le mot de passe actuel
+        if (encoder.matches(newPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Le nouveau mot de passe ne peut pas être identique au mot de passe actuel.");
+        }
+
+        // Vérifier que le nouveau mot de passe n'est pas dans l'historique
+        String currentHistory = user.getPasswordHistory() != null ? user.getPasswordHistory() : "";
+        List<String> passwordHistory = PasswordHistoryTokenizer.tokenize(currentHistory);
+
+        for (String oldHashedPassword : passwordHistory) {
+            if (encoder.matches(newPassword, oldHashedPassword)) {
+                throw new IllegalArgumentException("Ce mot de passe a déjà été utilisé récemment. Veuillez en choisir un autre.");
+            }
+        }
+
+        String hashedNewPassword = encoder.encode(newPassword);
+
+        // Ajouter l'ancien mot de passe à l'historique
+        String updatedHistory = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, user.getPassword());
+
+        // Mettre à jour le mot de passe
+        user.setPassword(hashedNewPassword);
+        user.setPasswordHistory(updatedHistory);
+        user.setLastPasswordUpdateDate(LocalDate.now());
+
+        // Supprimer le token de réinitialisation
+        user.setResetPasswordToken(null);
+        user.setResetTokenExpiryDate(null);
+
+        userRepository.save(user);
+
+        return true;
+    }
+
+    @Override
+    public SecurityQuestions getSecurityQuestionForUser(User user) {
+        UserSecurityAnswer answer = userSecurityAnswerRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("Aucune question de sécurité trouvée pour cet utilisateur"));
+        return answer.getSecurityQuestion();
+    }
+
+    @Override
+    public boolean verifySecurityAnswer(User user, String answer) {
+        if (answer == null || answer.trim().isEmpty()) {
+            return false;
+        }
+
+        UserSecurityAnswer securityAnswer = userSecurityAnswerRepository.findByUser(user)
+                .orElse(null);
+
+        if (securityAnswer == null) {
+            return false;
+        }
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        return encoder.matches(answer.toLowerCase().trim(), securityAnswer.getHashedAnswer());
     }
 }
