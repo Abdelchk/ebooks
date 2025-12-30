@@ -8,7 +8,8 @@ import fr.ensitech.ebooks.entity.Book;
 
 @Service
 public interface IBookService {
-	Book addBook(Book book) throws Exception;
+	Book addOrUpdate(Book book) throws Exception;
+    Book getBookById(Long id) throws Exception;
 	List<Book> getBooks() throws Exception;
 	List<Book> getBooksByTitleContaining(String texte) throws Exception;
 	Book updateBook(Book book) throws Exception;

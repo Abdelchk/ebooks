@@ -58,5 +58,9 @@ public class Book {
 	@Column(nullable = false)
 	@NotNull(message = "La quantité est obligatoire !")
 	private int quantity;
+
+    @Column(length = 30, nullable = false)
+    @NotEmpty(message = "La catégorie est obligatoire !")
+    private String category;
 	
 }

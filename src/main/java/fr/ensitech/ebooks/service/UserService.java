@@ -1,5 +1,6 @@
 package fr.ensitech.ebooks.service;
 
+import fr.ensitech.ebooks.email.*;
 import fr.ensitech.ebooks.entity.SecurityQuestions;
 import fr.ensitech.ebooks.entity.User;
 import fr.ensitech.ebooks.entity.UserSecurityAnswer;
@@ -9,10 +10,13 @@ import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
 import fr.ensitech.ebooks.utils.Dates;
+import fr.ensitech.ebooks.utils.PasswordEncoderFactory;
 import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,22 +45,90 @@ public class UserService implements IUserService {
     @Autowired
     private EmailService emailService;
 
+    private EmailContext emailContext;
+
     @Override
-    public User registerNewUserAccount(User user, Long questionId, String securityAnswer) {
-        //    	if (user == null) {
-//	        throw new NullPointerException("Le user à créer ne doit pas être NULL !");
-//	    }
-//	    if (user.getLastname() == null || user.getLastname().trim().isEmpty() || user.getFirstname() == null
-//	            || user.getFirstname().trim().isEmpty() || user.getEmail() == null
-//	            || user.getEmail().trim().isEmpty() || user.getPassword() == null
-//	            || user.getPassword().trim().isEmpty() || user.getBirthdate() == null
-//	            || Dates.convertDateToString(user.getBirthdate()).trim().isEmpty()
-//	            || user.getPhoneNumber() == null || user.getPhoneNumber().trim().isEmpty())
-//	    {
-//	        throw new IllegalArgumentException("Tous les paramètres sont obligatoires !");
-//	    }
+    public User addOrUpdateUser(User user) {
+        if (user == null) {
+            throw new NullPointerException("Le user à créer ne doit pas être NULL !");
+        }
+        if (user.getLastname() == null || user.getLastname().trim().isEmpty() || user.getFirstname() == null
+                || user.getFirstname().trim().isEmpty() || user.getEmail() == null
+                || user.getEmail().trim().isEmpty() || user.getPassword() == null
+                || user.getPassword().trim().isEmpty() || user.getBirthdate() == null
+                || user.getPhoneNumber() == null || user.getPhoneNumber().trim().isEmpty())
+        {
+            throw new IllegalArgumentException("Tous les paramètres sont obligatoires !");
+        }
+
+        // CAS 1 : Mise à jour (l'utilisateur a un ID)
+        if (user.getId() != null) {
+            User existingUser = userRepository.findById(user.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable avec l'ID " + user.getId()));
+
+            // Mettre à jour uniquement les champs modifiables
+            existingUser.setFirstname(user.getFirstname());
+            existingUser.setLastname(user.getLastname());
+            existingUser.setPhoneNumber(user.getPhoneNumber());
+            existingUser.setBirthdate(user.getBirthdate());
+            existingUser.setEmail(user.getEmail()); // Permet de changer l'email
+
+            System.out.println("Mise à jour de l'utilisateur ID " + user.getId());
+
+            // NE PAS toucher au mot de passe lors d'une mise à jour
+            userRepository.save(existingUser);
+
+            emailContext = new EmailContext();
+            emailContext.setStrategy(new AccountUpdatedEmailStrategy(emailService));
+            emailContext.executeStrategy(user.getEmail());
+
+            return existingUser;
+        }
+
+        // CAS 2 : Création (pas d'ID) - Vérifier si l'email existe déjà
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Un compte avec cet email existe déjà");
+            throw new IllegalArgumentException("Un utilisateur avec l'email " + user.getEmail() + " existe déjà");
+        }
+
+        // Créer un nouvel utilisateur
+        PasswordEncoder argon2Encoder = PasswordEncoderFactory.getArgon2Encoder();
+
+        user.setPassword(argon2Encoder.encode(user.getPassword()));
+        user.setEnabled(false);
+        user.setLastPasswordUpdateDate(LocalDate.now());
+
+        String token = UUID.randomUUID().toString();
+        user.setVerificationToken(token);
+        userRepository.save(user);
+
+        String activationlink = "http://localhost:8080/verify-email?token=" + token;
+
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new ActivationEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail(), activationlink);
+
+        System.out.println("Nouvel utilisateur créé : " + user.getEmail());
+
+        return user;
+    }
+
+    @Override
+    public void deleteUser(Long id) throws Exception {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable avec l'ID " + id));
+        user.setEnabled(false);
+        userRepository.save(user);
+
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new AccountDeactivatedEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail());
+    }
+
+
+    @Override
+    public UserSecurityAnswer addSecurityAnswer(User user, Long questionId, String securityAnswer) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("Utilisateur invalide");
         }
         if (securityAnswer == null || securityAnswer.trim().isEmpty()) {
             throw new IllegalArgumentException("La réponse de sécurité est obligatoire");
@@ -65,32 +137,14 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("La réponse ne doit pas dépasser 32 caractères");
         }
 
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        PasswordEncoder bcryptEncoder = PasswordEncoderFactory.getBCryptEncoder();
 
-        // Encoder le mot de passe
-        user.setPassword(encoder.encode(user.getPassword()));
-        user.setEnabled(false);
-        user.setLastPasswordUpdateDate(LocalDate.now()); // Initialiser la date de mise à jour
-
-        // Générer le token de vérification
-        String token = UUID.randomUUID().toString();
-        user.setVerificationToken(token);
-        userRepository.save(user);
-
-        // Enregistrer la réponse de sécurité
         UserSecurityAnswer answer = new UserSecurityAnswer();
         answer.setUser(user);
         answer.setSecurityQuestion(securityQuestionsRepository.findById(questionId)
                 .orElseThrow(() -> new IllegalArgumentException("Question de sécurité invalide")));
-        answer.setHashedAnswer(encoder.encode(securityAnswer.toLowerCase().trim()));
-        userSecurityAnswerRepository.save(answer);
-
-        // Envoyer l'email de vérification
-        String confirmationUrl = "http://localhost:8080/verify-email?token=" + token;
-        emailService.sendEmail(user.getEmail(), "Vérification de compte",
-                "Cliquez sur le lien pour vérifier votre compte : " + confirmationUrl);
-
-        return user;
+        answer.setHashedAnswer(bcryptEncoder.encode(securityAnswer.toLowerCase().trim()));
+        return userSecurityAnswerRepository.save(answer);
     }
 
     @Override
@@ -106,6 +160,11 @@ public class UserService implements IUserService {
 
         user.setEnabled(true);
         userRepository.save(user);
+
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new AccountActivatedEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail());
+
         return "valid";
     }
 
@@ -143,9 +202,14 @@ public class UserService implements IUserService {
         verificationCode.setUsed(false);
         verificationCodeRepository.save(verificationCode);
 
+        // Mettre à jour la date d'envoi du dernier code
+        user.setLastVerificationCodeSentAt(LocalDateTime.now());
+        userRepository.save(user);
+
         // Envoyer le code par email
-        emailService.sendEmail(user.getEmail(), "Code de vérification",
-                "Votre code de vérification est : " + code + ". Il expire dans 2 minutes.");
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new DoubleAuthEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail(), code);
 
         return code;
     }
@@ -191,10 +255,10 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("Utilisateur invalide");
         }
 
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        PasswordEncoder argon2Encoder = PasswordEncoderFactory.getArgon2Encoder();
 
         // Vérifier l'ancien mot de passe
-        if (!encoder.matches(oldPassword, user.getPassword())) {
+        if (!argon2Encoder.matches(oldPassword, user.getPassword())) {
             throw new IllegalArgumentException("L'ancien mot de passe est incorrect");
         }
 
@@ -223,13 +287,13 @@ public class UserService implements IUserService {
         List<String> passwordHistory = PasswordHistoryTokenizer.tokenize(currentHistory);
 
         for (String oldHashedPassword : passwordHistory) {
-            if (encoder.matches(newPassword, oldHashedPassword)) {
+            if (argon2Encoder.matches(newPassword, oldHashedPassword)) {
                 throw new IllegalArgumentException("Ce mot de passe a déjà été utilisé récemment. Veuillez en choisir un autre.");
             }
         }
 
         // Encoder le nouveau mot de passe après toutes les vérifications
-        String hashedNewPassword = encoder.encode(newPassword);
+        String hashedNewPassword = argon2Encoder.encode(newPassword);
 
         // Ajouter l'ancien mot de passe à l'historique
         String updatedHistory = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, user.getPassword());
@@ -240,6 +304,10 @@ public class UserService implements IUserService {
         user.setLastPasswordUpdateDate(LocalDate.now());
 
         userRepository.save(user);
+
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new PasswordUpdatedEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail());
 
         return true;
     }
@@ -257,10 +325,10 @@ public class UserService implements IUserService {
         userRepository.save(user);
 
         // Envoyer l'email de réinitialisation
-        String resetUrl = "http://localhost:8080/reset-password?token=" + token;
-        emailService.sendEmail(user.getEmail(), "Réinitialisation de mot de passe",
-                "Cliquez sur le lien pour réinitialiser votre mot de passe : " + resetUrl +
-                "\n\nCe lien expire dans 24 heures.");
+        String resetLink = "http://localhost:8080/reset-password?token=" + token;
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new ForgotPasswordEmailStrategy(emailService));
+        emailContext.executeStrategy(user.getEmail(), resetLink);
     }
 
     @Override
@@ -303,10 +371,10 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("Le nouveau mot de passe ne respecte pas les critères de sécurité");
         }
 
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        PasswordEncoder argon2Encoder = PasswordEncoderFactory.getArgon2Encoder();
 
         // Vérifier que le nouveau mot de passe n'est pas le mot de passe actuel
-        if (encoder.matches(newPassword, user.getPassword())) {
+        if (argon2Encoder.matches(newPassword, user.getPassword())) {
             throw new IllegalArgumentException("Le nouveau mot de passe ne peut pas être identique au mot de passe actuel.");
         }
 
@@ -315,12 +383,12 @@ public class UserService implements IUserService {
         List<String> passwordHistory = PasswordHistoryTokenizer.tokenize(currentHistory);
 
         for (String oldHashedPassword : passwordHistory) {
-            if (encoder.matches(newPassword, oldHashedPassword)) {
+            if (argon2Encoder.matches(newPassword, oldHashedPassword)) {
                 throw new IllegalArgumentException("Ce mot de passe a déjà été utilisé récemment. Veuillez en choisir un autre.");
             }
         }
 
-        String hashedNewPassword = encoder.encode(newPassword);
+        String hashedNewPassword = argon2Encoder.encode(newPassword);
 
         // Ajouter l'ancien mot de passe à l'historique
         String updatedHistory = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, user.getPassword());
@@ -359,7 +427,7 @@ public class UserService implements IUserService {
             return false;
         }
 
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        return encoder.matches(answer.toLowerCase().trim(), securityAnswer.getHashedAnswer());
+        PasswordEncoder bcryptEncoder = PasswordEncoderFactory.getBCryptEncoder();
+        return bcryptEncoder.matches(answer.toLowerCase().trim(), securityAnswer.getHashedAnswer());
     }
 }

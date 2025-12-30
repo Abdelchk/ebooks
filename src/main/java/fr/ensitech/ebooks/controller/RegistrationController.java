@@ -40,7 +40,8 @@ public class RegistrationController {
         }
 
         try {
-            userService.registerNewUserAccount(user, questionId, securityAnswer);
+            userService.addOrUpdateUser(user);
+            userService.addSecurityAnswer(user, questionId, securityAnswer);
             return "redirect:/last-step"; // Redirection au lieu de retour direct
         } catch (Exception e) {
             model.addAttribute("error", "Erreur lors de l'inscription : " + e.getMessage());

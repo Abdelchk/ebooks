@@ -5,12 +5,12 @@ import fr.ensitech.ebooks.entity.Book;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @Controller
-public class BookController {
+public class BookViewController {
 
     @Autowired
     private IBookService bookService;

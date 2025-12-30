@@ -1,6 +1,7 @@
 package fr.ensitech.ebooks.service;
 
 import fr.ensitech.ebooks.entity.SecurityQuestions;
+import fr.ensitech.ebooks.entity.UserSecurityAnswer;
 import org.springframework.stereotype.Service;
 
 import fr.ensitech.ebooks.entity.User;
@@ -10,9 +11,11 @@ import java.util.Optional;
 
 @Service
 public interface IUserService {
-	User registerNewUserAccount(User user, Long questionId, String securityAnswer) throws Exception;
+	User addOrUpdateUser(User user) throws Exception;
+    void deleteUser(Long id) throws Exception;
     Optional<User> findByEmail(String email);
 	String validateVerificationToken(String token) throws Exception;
+    UserSecurityAnswer addSecurityAnswer(User user, Long questionId, String securityAnswer) throws Exception;
     List<SecurityQuestions> getAllSecurityQuestions();
     String generateVerificationCode(User user);
     boolean validateVerificationCode(User user, String code);

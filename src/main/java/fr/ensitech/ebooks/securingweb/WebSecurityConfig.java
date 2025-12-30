@@ -7,9 +7,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -32,7 +34,7 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // requis pour le hash
+        return new Argon2PasswordEncoder(16, 32, 1, 4096, 3); // requis pour le hash
     }
 
     @Bean
@@ -46,24 +48,29 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .authenticationProvider(authProvider())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/register", "/login", "/verify-email", "/last-step",
-                                "/forgot-password", "/reset-password", "/css/**", "/js/**").permitAll()
-                .requestMatchers("/verify-code", "/resend-code").authenticated()
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .successHandler(twoFactorAuthSuccessHandler)
-                .failureHandler(customAuthenticationFailureHandler()) // ici
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout")
-                .permitAll()
-                );
+                // Désactivation du CSRF
+                .csrf(csrf -> csrf.disable())
+
+                .authenticationProvider(authProvider())
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/register", "/login", "/verify-email", "/last-step",
+                                    "/forgot-password", "/reset-password", "/css/**", "/js/**").permitAll()
+                    .requestMatchers("/verify-code", "/resend-code").authenticated()
+                    .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                    .loginPage("/login")
+                    .successHandler(twoFactorAuthSuccessHandler)
+                    .failureHandler(customAuthenticationFailureHandler()) // ici
+                    .permitAll()
+                )
+                .logout(logout -> logout
+                    .logoutUrl("/logout")
+                    .logoutSuccessUrl("/login?logout")
+                    .permitAll()
+                    )
+                // Authentification Basic (Postman friendly)
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }

@@ -15,21 +15,29 @@ public class BookService implements IBookService {
 	private IBookRepository bookRepository;
 
 	@Override
-	public Book addBook(Book book) throws Exception {
+	public Book addOrUpdate(Book book) throws Exception {
 		
 		if (book == null) {
 			throw new NullPointerException("Book ne doit pas être null");
 		}
 		if (book.getTitle() == null || book.getTitle().isBlank()
 				|| book.getDescription() == null || book.getDescription().isBlank()
-				|| book.getIsPublished() == null) {
+				|| book.getIsPublished() == null
+                || book.getAuthor() == null || book.getAuthor().isBlank()
+                || book.getPublicationDate() == null
+                || book.getCategory() == null || book.getCategory().isBlank()) {
 			throw new IllegalArgumentException("Tous les paramètres de book doivent être renseignés !");
 			
 		}
 		return bookRepository.save(book);
 	}
 
-	@Override
+    @Override
+    public Book getBookById(Long id) throws Exception {
+        return bookRepository.getReferenceById(id);
+    }
+
+    @Override
 	public List<Book> getBooks() throws Exception {;
 		return bookRepository.findAll();
 	}

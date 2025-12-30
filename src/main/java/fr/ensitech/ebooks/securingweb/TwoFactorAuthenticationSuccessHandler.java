@@ -12,6 +12,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Component
 public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
@@ -28,10 +29,20 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
         User user = userService.findByEmail(username)
                 .orElseThrow(() -> new IllegalStateException("Utilisateur introuvable"));
 
+        // Vérifier si un code a déjà été envoyé dans les 24h
+        LocalDateTime now = LocalDateTime.now();
+        if (user.getLastVerificationCodeSentAt() != null &&
+                user.getLastVerificationCodeSentAt().isAfter(now.minusHours(24))) {
+            // Rediriger directement vers la page d'accueil
+            response.sendRedirect("/accueil");
+            return;
+        }
+
         // Générer et envoyer le code 2FA
         userService.generateVerificationCode(user);
 
         // Rediriger vers la page de vérification du code
         response.sendRedirect("/verify-code");
     }
+
 }
