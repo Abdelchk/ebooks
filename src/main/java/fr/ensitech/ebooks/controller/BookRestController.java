@@ -15,7 +15,7 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
-@CrossOrigin("http://localhost:8080")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/rest/books")
 public class BookRestController implements IBookController{
     @Autowired
@@ -109,9 +109,13 @@ public class BookRestController implements IBookController{
     @Produces(MediaType.APPLICATION_JSON)
     public ResponseEntity<List<Book>> getAllBooks() {
         try {
+            System.out.println("API /all appelée - Récupération des livres...");
             List<Book> books = bookService.getBooks();
+            System.out.println("Nombre de livres récupérés : " + books.size());
             return new ResponseEntity<>(books, HttpStatus.OK);
         } catch (Exception e) {
+            System.err.println("Erreur lors de la récupération des livres : " + e.getMessage());
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 

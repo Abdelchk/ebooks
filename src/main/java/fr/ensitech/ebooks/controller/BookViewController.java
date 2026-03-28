@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
+// DÉSACTIVÉ - Toutes les routes de livres sont maintenant dans BookRestController
+//@Controller
 public class BookViewController {
 
     @Autowired

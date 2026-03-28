@@ -10,10 +10,10 @@ import java.util.stream.Collectors;
  * Transforme une chaîne de mots de passe séparés par des espaces en liste et vice-versa.
  */
 public class PasswordHistoryTokenizer {
-
+    
     private static final int MAX_PASSWORD_HISTORY = 5;
     private static final String DELIMITER = " ";
-
+    
     /**
      * Convertit une chaîne d'historique en liste de mots de passe
      * @param passwordHistory chaîne contenant les mots de passe séparés par des espaces
@@ -27,7 +27,7 @@ public class PasswordHistoryTokenizer {
                 .filter(s -> !s.trim().isEmpty())
                 .collect(Collectors.toList());
     }
-
+    
     /**
      * Convertit une liste de mots de passe en chaîne d'historique
      * @param passwords liste des mots de passe
@@ -39,7 +39,7 @@ public class PasswordHistoryTokenizer {
         }
         return String.join(DELIMITER, passwords);
     }
-
+    
     /**
      * Ajoute un nouveau mot de passe à l'historique et maintient uniquement les 5 derniers
      * @param currentHistory historique actuel
@@ -48,18 +48,18 @@ public class PasswordHistoryTokenizer {
      */
     public static String addPasswordToHistory(String currentHistory, String newHashedPassword) {
         List<String> passwords = tokenize(currentHistory);
-
+        
         // Ajouter le nouveau mot de passe au début de la liste
         passwords.add(0, newHashedPassword);
-
+        
         // Garder seulement les 5 derniers mots de passe
         if (passwords.size() > MAX_PASSWORD_HISTORY) {
             passwords = passwords.subList(0, MAX_PASSWORD_HISTORY);
         }
-
+        
         return detokenize(passwords);
     }
-
+    
     /**
      * Vérifie si un mot de passe existe dans l'historique
      * @param passwordHistory historique des mots de passe
@@ -70,7 +70,7 @@ public class PasswordHistoryTokenizer {
         List<String> passwords = tokenize(passwordHistory);
         return passwords.contains(hashedPassword);
     }
-
+    
     /**
      * Obtient le nombre maximum de mots de passe à conserver
      * @return nombre maximum de mots de passe

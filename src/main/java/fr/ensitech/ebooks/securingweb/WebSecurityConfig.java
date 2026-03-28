@@ -1,13 +1,16 @@
 package fr.ensitech.ebooks.securingweb;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
@@ -16,8 +19,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,27 +51,49 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Désactivation du CSRF
+                // Configuration CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Désactivation du CSRF (nécessaire pour les APIs REST)
                 .csrf(csrf -> csrf.disable())
 
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/register", "/login", "/verify-email", "/last-step",
-                                    "/forgot-password", "/reset-password", "/css/**", "/js/**").permitAll()
-                    .requestMatchers("/verify-code", "/resend-code").authenticated()
+                    // Autoriser les endpoints publics de l'API REST
+                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all").permitAll()
+                    // Endpoints nécessitant l'authentification
+                    .requestMatchers("/api/rest/**").authenticated()
+                    // Tout le reste nécessite une authentification
                     .anyRequest().authenticated()
                 )
-                .formLogin(form -> form
-                    .loginPage("/login")
-                    .successHandler(twoFactorAuthSuccessHandler)
-                    .failureHandler(customAuthenticationFailureHandler()) // ici
-                    .permitAll()
-                )
+                // Désactiver le formLogin car nous gérons l'authentification via API REST
+                // .formLogin(form -> form
+                //     .loginPage("/login")
+                //     .successHandler(twoFactorAuthSuccessHandler)
+                //     .failureHandler(customAuthenticationFailureHandler())
+                //     .permitAll()
+                // )
                 .logout(logout -> logout
                     .logoutUrl("/logout")
-                    .logoutSuccessUrl("/login?logout")
                     .permitAll()
                     )
                 // Authentification Basic (Postman friendly)

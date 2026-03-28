@@ -18,7 +18,8 @@ import fr.ensitech.ebooks.service.RecaptchaService;
 import fr.ensitech.ebooks.service.UserService;
 import jakarta.validation.Valid;
 
-@Controller
+// DÉSACTIVÉ - Toutes les routes d'inscription sont maintenant dans AuthRestController
+//@Controller
 public class RegistrationController {
 
     private static final Logger logger = LoggerFactory.getLogger(RegistrationController.class);

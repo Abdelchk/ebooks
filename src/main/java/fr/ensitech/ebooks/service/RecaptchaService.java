@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import jakarta.annotation.PostConstruct;
 
 import java.io.IOException;
 
@@ -32,34 +31,15 @@ public class RecaptchaService {
     private float scoreThreshold;
 
     /**
-     * Méthode appelée après l'injection des propriétés pour valider la configuration
-     */
-    @PostConstruct
-    public void init() {
-        logger.info("=== Configuration reCAPTCHA ===");
-        logger.info("Project ID: {}", projectId);
-        logger.info("Site Key: {}", siteKey);
-        logger.info("Score Threshold: {}", scoreThreshold);
-        
-        if (projectId == null || projectId.isEmpty()) {
-            logger.error("❌ ERREUR: recaptcha.project.id n'est pas configuré !");
-        }
-        if (siteKey == null || siteKey.isEmpty()) {
-            logger.error("❌ ERREUR: recaptcha.site.key n'est pas configuré !");
-        }
-        logger.info("=== Fin Configuration reCAPTCHA ===");
-    }
-
-    /**
      * Vérifie le token reCAPTCHA et retourne true si valide
-     *
+     * 
      * @param token Le token généré côté client
      * @param expectedAction L'action attendue (ex: "REGISTER")
      * @return true si la validation réussit, false sinon
      */
     public boolean verifyToken(String token, String expectedAction) {
         try (RecaptchaEnterpriseServiceClient client = RecaptchaEnterpriseServiceClient.create()) {
-
+            
             // Définir les propriétés de l'événement
             Event event = Event.newBuilder()
                     .setSiteKey(siteKey)
@@ -76,15 +56,15 @@ public class RecaptchaService {
 
             // Vérifier si le token est valide
             if (!response.getTokenProperties().getValid()) {
-                logger.warn("Token reCAPTCHA invalide. Raison: {}",
+                logger.warn("Token reCAPTCHA invalide. Raison: {}", 
                            response.getTokenProperties().getInvalidReason().name());
                 return false;
             }
 
             // Vérifier si l'action attendue correspond
             if (!response.getTokenProperties().getAction().equals(expectedAction)) {
-                logger.warn("Action reCAPTCHA non conforme. Attendu: {}, Reçu: {}",
-                           expectedAction,
+                logger.warn("Action reCAPTCHA non conforme. Attendu: {}, Reçu: {}", 
+                           expectedAction, 
                            response.getTokenProperties().getAction());
                 return false;
             }
@@ -104,10 +84,10 @@ public class RecaptchaService {
                 return false;
             }
 
-            logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}",
-                       recaptchaScore,
+            logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}", 
+                       recaptchaScore, 
                        response.getName().substring(response.getName().lastIndexOf("/") + 1));
-
+            
             return true;
 
         } catch (IOException e) {
@@ -120,10 +100,6 @@ public class RecaptchaService {
      * Obtient la clé de site pour l'intégration côté client
      */
     public String getSiteKey() {
-        logger.debug("getSiteKey() appelé - Retour: {}", siteKey);
-        if (siteKey == null || siteKey.isEmpty()) {
-            logger.error("❌ ERREUR CRITIQUE: La clé reCAPTCHA est NULL ou vide !");
-        }
         return siteKey;
     }
 }

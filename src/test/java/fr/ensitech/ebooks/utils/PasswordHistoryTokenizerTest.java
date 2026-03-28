@@ -33,9 +33,9 @@ class PasswordHistoryTokenizerTest {
         String hash2 = "$2a$10$hash2";
         String hash3 = "$2a$10$hash3";
         String history = hash1 + " " + hash2 + " " + hash3;
-
+        
         List<String> result = PasswordHistoryTokenizer.tokenize(history);
-
+        
         assertEquals(3, result.size(), "Devrait contenir 3 mots de passe");
         assertEquals(hash1, result.get(0));
         assertEquals(hash2, result.get(1));
@@ -66,9 +66,9 @@ class PasswordHistoryTokenizerTest {
         String hash1 = "$2a$10$hash1";
         String hash2 = "$2a$10$hash2";
         String hash3 = "$2a$10$hash3";
-
+        
         String result = PasswordHistoryTokenizer.detokenize(Arrays.asList(hash1, hash2, hash3));
-
+        
         assertEquals(hash1 + " " + hash2 + " " + hash3, result);
     }
 
@@ -76,7 +76,7 @@ class PasswordHistoryTokenizerTest {
     void testAddPasswordToHistoryEmpty() {
         String newHash = "$2a$10$newHash";
         String result = PasswordHistoryTokenizer.addPasswordToHistory("", newHash);
-
+        
         assertEquals(newHash, result, "Devrait contenir uniquement le nouveau mot de passe");
     }
 
@@ -86,9 +86,9 @@ class PasswordHistoryTokenizerTest {
         String hash2 = "$2a$10$hash2";
         String currentHistory = hash1 + " " + hash2;
         String newHash = "$2a$10$newHash";
-
+        
         String result = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, newHash);
-
+        
         List<String> passwords = PasswordHistoryTokenizer.tokenize(result);
         assertEquals(3, passwords.size(), "Devrait contenir 3 mots de passe");
         assertEquals(newHash, passwords.get(0), "Le nouveau mot de passe devrait être en premier");
@@ -106,9 +106,9 @@ class PasswordHistoryTokenizerTest {
         String hash5 = "$2a$10$hash5";
         String currentHistory = hash1 + " " + hash2 + " " + hash3 + " " + hash4 + " " + hash5;
         String newHash = "$2a$10$newHash";
-
+        
         String result = PasswordHistoryTokenizer.addPasswordToHistory(currentHistory, newHash);
-
+        
         List<String> passwords = PasswordHistoryTokenizer.tokenize(result);
         assertEquals(5, passwords.size(), "Devrait contenir exactement 5 mots de passe");
         assertEquals(newHash, passwords.get(0), "Le nouveau mot de passe devrait être en premier");
@@ -125,10 +125,10 @@ class PasswordHistoryTokenizerTest {
         String hash2 = "$2a$10$hash2";
         String hash3 = "$2a$10$hash3";
         String original = hash1 + " " + hash2 + " " + hash3;
-
+        
         List<String> tokenized = PasswordHistoryTokenizer.tokenize(original);
         String detokenized = PasswordHistoryTokenizer.detokenize(tokenized);
-
+        
         assertEquals(original, detokenized, "Devrait obtenir la même chaîne après tokenize/detokenize");
     }
 
@@ -138,7 +138,7 @@ class PasswordHistoryTokenizerTest {
         String hash2 = "$2a$10$hash2";
         String hash3 = "$2a$10$hash3";
         String history = hash1 + " " + hash2 + " " + hash3;
-
+        
         assertTrue(PasswordHistoryTokenizer.isPasswordInHistory(history, hash2),
                 "Devrait trouver le mot de passe dans l'historique");
     }
@@ -149,7 +149,7 @@ class PasswordHistoryTokenizerTest {
         String hash2 = "$2a$10$hash2";
         String hash3 = "$2a$10$hash3";
         String history = hash1 + " " + hash2;
-
+        
         assertFalse(PasswordHistoryTokenizer.isPasswordInHistory(history, hash3),
                 "Ne devrait pas trouver le mot de passe dans l'historique");
     }

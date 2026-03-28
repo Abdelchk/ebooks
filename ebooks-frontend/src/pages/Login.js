@@ -1,0 +1,114 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Container, Form, Button, Alert } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
+import Navigation from '../components/Navbar';
+
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [validated, setValidated] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
+
+    setValidated(true);
+    setError('');
+
+    try {
+      console.log('🔐 Tentative de connexion avec:', email);
+      const response = await login(email, password);
+      console.log('📥 Réponse de connexion:', response);
+
+      if (response && response.success) {
+        console.log('✅ Connexion réussie');
+
+        // Vérifier si 2FA est requis
+        if (response.requiresTwoFactor) {
+          console.log('🔐 2FA requis, redirection vers /verify-code');
+          navigate('/verify-code');
+        } else {
+          console.log('✅ Pas de 2FA requis, redirection vers /accueil');
+          navigate('/accueil');
+        }
+      } else {
+        console.error('❌ Connexion échouée:', response);
+        setError(response?.message || 'Email ou mot de passe incorrect');
+      }
+    } catch (err) {
+      console.error('❌ Erreur lors de la connexion:', err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response?.data) {
+        setError(JSON.stringify(err.response.data));
+      } else {
+        setError('Erreur de connexion. Vérifiez que le backend est démarré.');
+      }
+    }
+  };
+
+  return (
+    <>
+      <Navigation />
+      <Container>
+        <h2 className="mt-5">Connexion</h2>
+
+        {error && <Alert variant="danger">{error}</Alert>}
+
+        <Form noValidate validated={validated} onSubmit={handleSubmit}>
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}"
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              Format de l'email incorrect.
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Mot de passe</Form.Label>
+            <Form.Control
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              Veuillez entrer un mot de passe.
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Button variant="primary" type="submit">
+            Se connecter
+          </Button>
+          {' '}
+          <Link to="/register">
+            <Button variant="secondary">Créer un compte</Button>
+          </Link>
+          {' '}
+          <Link to="/forgot-password">
+            <Button variant="link">Mot de passe oublié ?</Button>
+          </Link>
+        </Form>
+      </Container>
+    </>
+  );
+};
+
+export default Login;
+

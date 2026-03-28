@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
-@Controller
+// DÉSACTIVÉ - Toutes les routes 2FA sont maintenant dans AuthRestController
+//@Controller
 public class TwoFactorAuthController {
 
     @Autowired

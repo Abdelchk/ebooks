@@ -94,10 +94,12 @@ public class User {
     @Column
     private LocalDateTime lastVerificationCodeSentAt;
 
-    @NotEmpty(message = "Le CAPTCHA est obligatoire !")
+    // Champs transitoires pour la validation du CAPTCHA (ne sont pas stockés en base)
+    @Transient
     private String captchaId;
 
-    @NotEmpty(message = "La réponse au CAPTCHA est obligatoire !")
+    @Transient
+
     private String captchaInput;
 
 }
