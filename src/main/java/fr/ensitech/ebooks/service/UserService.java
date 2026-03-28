@@ -101,7 +101,8 @@ public class UserService implements IUserService {
         user.setVerificationToken(token);
         userRepository.save(user);
 
-        String activationlink = "http://localhost:8080/verify-email?token=" + token;
+        // Lien de vérification pour React (CORRIGÉ)
+        String activationlink = "http://localhost:3000/verify-email?token=" + token;
 
         emailContext = new EmailContext();
         emailContext.setStrategy(new ActivationEmailStrategy(emailService));
@@ -324,8 +325,8 @@ public class UserService implements IUserService {
 
         userRepository.save(user);
 
-        // Envoyer l'email de réinitialisation
-        String resetLink = "http://localhost:8080/reset-password?token=" + token;
+        // Envoyer l'email de réinitialisation (CORRIGÉ pour React)
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
         emailContext = new EmailContext();
         emailContext.setStrategy(new ForgotPasswordEmailStrategy(emailService));
         emailContext.executeStrategy(user.getEmail(), resetLink);
