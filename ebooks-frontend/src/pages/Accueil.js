@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { bookService } from '../services/bookService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
+import './Accueil.css';
 
 const Accueil = () => {
+  const navigate = useNavigate();
   const [books, setBooks] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,6 +28,10 @@ const Accueil = () => {
     }
   };
 
+  const handleBookClick = (bookId) => {
+    navigate(`/book/${bookId}`);
+  };
+
   return (
     <>
       <Navigation />
@@ -39,7 +46,19 @@ const Accueil = () => {
           <Row>
             {books.map((book) => (
               <Col md={4} key={book.id} className="d-flex mb-3">
-                <Card className="w-100 h-100 d-flex flex-column">
+                <Card 
+                  className="w-100 h-100 d-flex flex-column book-card" 
+                  onClick={() => handleBookClick(book.id)}
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
+                  }}
+                >
                   <Card.Img
                     variant="top"
                     src={book.coverImageUrl}

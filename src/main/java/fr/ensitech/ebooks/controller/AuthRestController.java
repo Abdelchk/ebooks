@@ -20,6 +20,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +113,11 @@ public class AuthRestController {
                 response.put("email", user.getEmail());
                 response.put("firstname", user.getFirstname());
                 response.put("lastname", user.getLastname());
+                
+                // Ajouter les informations d'expiration du mot de passe
+                Map<String, Object> passwordStatus = checkPasswordExpiration(user);
+                response.put("passwordStatus", passwordStatus);
+                
                 return ResponseEntity.ok(response);
             }
         }
@@ -338,10 +345,17 @@ public class AuthRestController {
     public ResponseEntity<?> updatePassword(@RequestBody UpdatePasswordRequest request,
                                            @AuthenticationPrincipal UserDetails userDetails) {
         try {
+            System.out.println("=== DEBUG update-password ===");
+            System.out.println("User: " + userDetails.getUsername());
+            System.out.println("Request: " + request);
+            
             User user = userService.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
             
+            System.out.println("User found: " + user.getEmail());
+            
             SecurityQuestions securityQuestion = userService.getSecurityQuestionForUser(user);
+            System.out.println("Security question ID: " + securityQuestion.getId());
             
             boolean success = userService.updatePassword(
                 user,
@@ -359,12 +373,79 @@ public class AuthRestController {
                     .body(Map.of("success", false, "message", "Erreur lors de la mise à jour"));
             }
         } catch (IllegalArgumentException e) {
+            System.err.println("Erreur updatePassword: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
+            System.err.println("Erreur serveur updatePassword: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur serveur"));
+                .body(Map.of("success", false, "message", "Erreur serveur: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Endpoint pour vérifier l'état d'expiration du mot de passe
+     */
+    @GetMapping("/password-status")
+    public ResponseEntity<?> getPasswordStatus(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("authenticated", false));
+        }
+        
+        try {
+            User user = userService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
+            
+            Map<String, Object> passwordStatus = checkPasswordExpiration(user);
+            return ResponseEntity.ok(passwordStatus);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Erreur lors de la vérification"));
+        }
+    }
+
+    /**
+     * Méthode utilitaire pour vérifier l'expiration du mot de passe
+     * Utilisée par /check et /password-status
+     */
+    private Map<String, Object> checkPasswordExpiration(User user) {
+        Map<String, Object> status = new HashMap<>();
+        status.put("expired", false);
+        status.put("warning", false);
+        status.put("daysRemaining", null);
+        status.put("message", null);
+        
+        LocalDate lastPasswordUpdate = user.getLastPasswordUpdateDate();
+        
+        // Si l'utilisateur n'a jamais changé son mot de passe
+        if (lastPasswordUpdate == null) {
+            status.put("neverChanged", true);
+            return status;
+        }
+        
+        status.put("neverChanged", false);
+        
+        // Vérifier si le mot de passe a expiré (12 semaines = 84 jours)
+        long daysSinceLastUpdate = ChronoUnit.DAYS.between(lastPasswordUpdate, LocalDate.now());
+        long daysRemaining = 84 - daysSinceLastUpdate;
+        
+        status.put("daysSinceLastUpdate", daysSinceLastUpdate);
+        status.put("daysRemaining", daysRemaining);
+        
+        if (daysSinceLastUpdate >= 84) {
+            // Mot de passe expiré
+            status.put("expired", true);
+            status.put("message", "Votre mot de passe a expiré. Vous devez le changer pour continuer.");
+        } else if (daysSinceLastUpdate >= 77) {
+            // Avertissement (expire dans les 7 jours)
+            status.put("warning", true);
+            status.put("message", "Attention : Votre mot de passe expire dans " + daysRemaining + " jour(s).");
+        }
+        
+        return status;
     }
 
     // DTO Classes

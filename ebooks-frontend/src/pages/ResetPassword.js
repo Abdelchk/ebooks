@@ -4,11 +4,14 @@ import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { authService } from '../services/authService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
+import '../styles/password-toggle.css';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [validated, setValidated] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
@@ -107,29 +110,49 @@ const ResetPassword = () => {
             <Form noValidate validated={validated} onSubmit={handleSubmit}>
               <Form.Group className="mb-3">
                 <Form.Label>Nouveau mot de passe</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  pattern="^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-zÀ-ÖØ-öø-ÿ\d@$!%*?&#]{12,}$"
-                  required
-                />
-                <Form.Control.Feedback type="invalid">
-                  Le mot de passe doit contenir au moins 12 caractères, une lettre, un chiffre et un caractère spécial.
-                </Form.Control.Feedback>
+                <div className="input-group">
+                  <Form.Control
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      pattern="^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-zÀ-ÖØ-öø-ÿ\d@$!%*?&#]{12,}$"
+                      required
+                  />
+                  <Button
+                      variant="outline-secondary"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      type="button"
+                      title={showNewPassword ? "Masquer" : "Afficher"}
+                  >
+                    <i className={`bi ${showNewPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`}></i>
+                  </Button>
+                  <Form.Control.Feedback type="invalid">
+                    Le mot de passe doit contenir au moins 12 caractères, une lettre, un chiffre et un caractère spécial.
+                  </Form.Control.Feedback>
+                </div>
               </Form.Group>
 
               <Form.Group className="mb-3">
                 <Form.Label>Confirmer le nouveau mot de passe</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-                <Form.Control.Feedback type="invalid">
-                  Veuillez confirmer votre nouveau mot de passe.
-                </Form.Control.Feedback>
+                <div className="input-group">
+                  <Form.Control
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <Button 
+                    variant="outline-secondary" 
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    type="button"
+                    title={showConfirmPassword ? "Masquer" : "Afficher"}
+                  >
+                    <i className={`bi ${showConfirmPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`}></i>
+                  </Button>
+                  <Form.Control.Feedback type="invalid">
+                    Veuillez confirmer votre nouveau mot de passe.
+                  </Form.Control.Feedback>
+                </div>
               </Form.Group>
 
               <Button variant="primary" type="submit">

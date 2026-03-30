@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navbar';
+import '../styles/password-toggle.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [validated, setValidated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -82,15 +84,25 @@ const Login = () => {
 
           <Form.Group className="mb-3">
             <Form.Label>Mot de passe</Form.Label>
-            <Form.Control
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Veuillez entrer un mot de passe.
-            </Form.Control.Feedback>
+            <div className="input-group">
+              <Form.Control
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button 
+                variant="outline-secondary" 
+                onClick={() => setShowPassword(!showPassword)}
+                type="button"
+                title={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                <i className={`bi ${showPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`}></i>
+              </Button>
+              <Form.Control.Feedback type="invalid">
+                Veuillez entrer un mot de passe.
+              </Form.Control.Feedback>
+            </div>
           </Form.Group>
 
           <Button variant="primary" type="submit">

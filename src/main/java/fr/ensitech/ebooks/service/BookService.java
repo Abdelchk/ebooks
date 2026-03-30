@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import fr.ensitech.ebooks.entity.Book;
 import fr.ensitech.ebooks.repository.IBookRepository;
@@ -33,8 +34,10 @@ public class BookService implements IBookService {
 	}
 
     @Override
+    @Transactional(readOnly = true)
     public Book getBookById(Long id) throws Exception {
-        return bookRepository.getReferenceById(id);
+        return bookRepository.findById(id)
+            .orElseThrow(() -> new Exception("Livre non trouvé avec l'ID : " + id));
     }
 
     @Override

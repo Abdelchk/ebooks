@@ -310,6 +310,7 @@ public class UserService implements IUserService {
         emailContext.setStrategy(new PasswordUpdatedEmailStrategy(emailService));
         emailContext.executeStrategy(user.getEmail());
 
+
         return true;
     }
 
