@@ -152,35 +152,34 @@ const Accueil = () => {
                 ) : (
                   <Row>
                     {filteredBooks.map((book) => (
-                      <Col md={6} lg={4} xl={3} key={book.id} className="d-flex mb-3">
+                      <Col md={6} lg={4} xl={3} key={book.id} className="mb-4">
                         <Card
-                          className="w-100 h-100 d-flex flex-column book-card"
+                          className="book-card shadow-sm h-100"
                           onClick={() => handleBookClick(book.id)}
-                          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-5px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
-                          }}
                         >
-                          <Card.Img
-                            variant="top"
-                            src={book.coverImageUrl}
-                            alt="Couverture du livre"
-                            style={{ height: '200px', objectFit: 'cover' }}
-                          />
+                          <div className="book-cover-wrapper">
+                            <Card.Img
+                              variant="top"
+                              src={book.coverImageUrl}
+                              alt={`Couverture de ${book.title}`}
+                              className="book-cover-img"
+                            />
+                          </div>
                           <Card.Body className="d-flex flex-column">
-                            <Card.Title>{book.title}</Card.Title>
-                            <Card.Text className="flex-grow-1">{book.description}</Card.Text>
-                            <Card.Text>
-                              <small className="text-muted">Auteur : {book.author}</small>
+                            <Card.Title className="book-title mb-2">{book.title}</Card.Title>
+                            <Card.Text className="book-description flex-grow-1 text-muted mb-2">
+                              {book.description}
                             </Card.Text>
-                            <Card.Text>
-                              <small className="text-muted">Stock : {book.quantity}</small>
-                            </Card.Text>
+                            <div className="book-meta mt-auto">
+                              <div className="d-flex align-items-center mb-1">
+                                <i className="bi bi-person-fill me-2 text-primary"></i>
+                                <small className="text-dark"><strong>{book.author}</strong></small>
+                              </div>
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-box-seam me-2 text-success"></i>
+                                <small className="text-muted">Stock : {book.quantity}</small>
+                              </div>
+                            </div>
                           </Card.Body>
                         </Card>
                       </Col>

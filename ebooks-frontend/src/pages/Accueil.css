@@ -1,99 +1,204 @@
+/* Styles pour les cartes de livres */
 .book-card {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  border-radius: 12px;
   overflow: hidden;
+  background: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .book-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2) !important;
 }
 
-.book-card .card-img-top {
-  transition: transform 0.3s ease;
-  height: 300px;
-  object-fit: cover;
+/* Wrapper pour l'image de couverture */
+.book-cover-wrapper {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.book-card:hover .card-img-top {
+.book-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transition: transform 0.4s ease;
+  padding: 8px;
+}
+
+.book-card:hover .book-cover-img {
   transform: scale(1.05);
 }
 
+/* Corps de la carte */
 .book-card .card-body {
   padding: 1.25rem;
+  background: white;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.book-card .card-title {
-  font-size: 1.2rem;
-  font-weight: bold;
+/* Titre du livre */
+.book-title {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #2c3e50;
-  margin-bottom: 0.75rem;
-  min-height: 2.4rem;
+  line-height: 1.3;
+  min-height: 2.6rem;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  margin-bottom: 0.75rem;
 }
 
-.book-card .card-text {
-  font-size: 0.9rem;
-  color: #555;
+/* Description du livre */
+.book-description {
+  font-size: 0.875rem;
+  color: #6c757d;
   line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  margin-bottom: 1rem;
 }
 
-.book-card small.text-muted {
-  font-size: 0.85rem;
+/* Métadonnées du livre */
+.book-meta {
+  border-top: 1px solid #e9ecef;
+  padding-top: 0.75rem;
+  margin-top: auto;
+}
+
+.book-meta i {
+  font-size: 0.9rem;
+}
+
+.book-meta small {
+  font-size: 0.875rem;
 }
 
 /* Styles pour la sidebar */
 .list-group-item {
   border: 1px solid #dee2e6;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s ease;
+  border-radius: 6px !important;
+  margin-bottom: 0.25rem;
 }
 
 .list-group-item:hover {
   background-color: #f8f9fa;
   transform: translateX(5px);
+  border-color: #0d6efd;
 }
 
 .list-group-item.active {
   background-color: #0d6efd;
   border-color: #0d6efd;
   color: white;
-  font-weight: bold;
+  font-weight: 600;
+  transform: translateX(5px);
 }
 
 /* Styles pour la barre de recherche */
 .input-group {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .input-group .form-control {
-  border: 1px solid #ced4da;
+  border: 2px solid #e9ecef;
   padding: 0.75rem 1rem;
   font-size: 1rem;
+  transition: all 0.3s ease;
 }
 
 .input-group .form-control:focus {
   border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
 }
 
 .input-group-text {
   background-color: #0d6efd;
   color: white;
   border: none;
+  padding: 0 1.25rem;
+}
+
+.input-group-text i {
+  font-size: 1.1rem;
+}
+
+/* Badge pour les catégories */
+.alert-info {
+  border-radius: 8px;
+  border-left: 4px solid #0dcaf0;
+}
+
+/* Titre de la page */
+h2 {
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+h5 {
+  font-weight: 600;
+  color: #495057;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .book-card .card-img-top {
-    height: 200px;
+  .book-cover-wrapper {
+    height: 280px;
+  }
+
+  .book-title {
+    font-size: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
   }
 }
+
+@media (min-width: 1200px) {
+  .book-cover-wrapper {
+    height: 420px;
+  }
+}
+
+/* Animation au chargement */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.book-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
 

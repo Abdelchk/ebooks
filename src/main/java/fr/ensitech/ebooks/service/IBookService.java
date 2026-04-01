@@ -12,6 +12,9 @@ public interface IBookService {
     Book getBookById(Long id) throws Exception;
 	List<Book> getBooks() throws Exception;
 	List<Book> getBooksByTitleContaining(String texte) throws Exception;
+	List<Book> searchBooks(String query) throws Exception;
+	List<Book> getBooksByCategory(String category) throws Exception;
+	List<Book> searchBooksByCategory(String category, String query) throws Exception;
 	Book updateBook(Book book) throws Exception;
 	void deleteBook(Long id) throws Exception;
 }

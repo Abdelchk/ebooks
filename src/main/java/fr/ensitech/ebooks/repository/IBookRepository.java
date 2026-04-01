@@ -24,4 +24,9 @@ public interface IBookRepository extends JpaRepository<Book, Long> {
 	List<Book> findByPublicationDate(Date date) throws Exception;
 	List<Book> findByPublicationDateBetween(Date dateInf, Date dateSup) throws Exception;
 	List<Book> findByTitleOrderByPublicationDateDesc(String title) throws Exception;
+	List<Book> findByAuthorContainingIgnoreCase(String author) throws Exception;
+	List<Book> findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(String title, String author) throws Exception;
+	List<Book> findByCategory(String category) throws Exception;
+	List<Book> findByCategoryAndTitleContainingIgnoreCaseOrCategoryAndAuthorContainingIgnoreCase(
+			String category1, String title, String category2, String author) throws Exception;
 }
