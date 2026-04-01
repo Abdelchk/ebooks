@@ -70,16 +70,18 @@ const Login = () => {
         <Form noValidate validated={validated} onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
             <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Format de l'email incorrect.
-            </Form.Control.Feedback>
+            <div className="input-group">
+              <Form.Control
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Format de l'email incorrect.
+              </Form.Control.Feedback>
+            </div>
           </Form.Group>
 
           <Form.Group className="mb-3">

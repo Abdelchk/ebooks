@@ -131,116 +131,130 @@ const Register = () => {
         <Form noValidate validated={validated} onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
             <Form.Label>Nom</Form.Label>
-            <Form.Control
-              type="text"
-              name="lastname"
-              value={formData.lastname}
-              onChange={handleChange}
-              pattern="^[a-zA-ZÀ-ÿ\s-]+$"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Entrez votre nom.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="text"
+                  name="lastname"
+                  value={formData.lastname}
+                  onChange={handleChange}
+                  pattern="^[a-zA-ZÀ-ÿ\s-]+$"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Entrez votre nom.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Prénom</Form.Label>
-            <Form.Control
-              type="text"
-              name="firstname"
-              value={formData.firstname}
-              onChange={handleChange}
-              pattern="^[a-zA-ZÀ-ÿ\s-]+$"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Entrez votre prénom.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="text"
+                  name="firstname"
+                  value={formData.firstname}
+                  onChange={handleChange}
+                  pattern="^[a-zA-ZÀ-ÿ\s-]+$"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Entrez votre prénom.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Date de naissance</Form.Label>
-            <Form.Control
-              type="date"
-              name="birthdate"
-              value={formData.birthdate}
-              onChange={handleChange}
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Entrez une date de naissance valide.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="date"
+                  name="birthdate"
+                  value={formData.birthdate}
+                  onChange={handleChange}
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Entrez une date de naissance valide.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>N° de téléphone</Form.Label>
-            <Form.Control
-              type="text"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              pattern="^(0|\+33|0033)[1-9][0-9]{8}"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Le numéro de téléphone doit contenir exactement 10 chiffres.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="text"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  pattern="^(0|\+33|0033)[1-9][0-9]{8}"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Le numéro de téléphone doit contenir exactement 10 chiffres.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Veuillez saisir un email valide.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Veuillez saisir un email valide.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Question de sécurité</Form.Label>
-            <Form.Select
-              name="questionId"
-              value={formData.questionId}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Choisissez une question de sécurité --</option>
-              {Array.isArray(questions) && questions.length > 0 ? (
-                questions.map((question) => (
-                  <option key={question.id} value={question.id}>
-                    {question.question}
-                  </option>
-                ))
-              ) : (
-                <option disabled>Chargement des questions...</option>
-              )}
-            </Form.Select>
-            <Form.Control.Feedback type="invalid">
-              Veuillez choisir une question de sécurité.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Select
+                  name="questionId"
+                  value={formData.questionId}
+                  onChange={handleChange}
+                  required
+              >
+                <option value="">-- Choisissez une question de sécurité --</option>
+                {Array.isArray(questions) && questions.length > 0 ? (
+                    questions.map((question) => (
+                        <option key={question.id} value={question.id}>
+                          {question.question}
+                        </option>
+                    ))
+                ) : (
+                    <option disabled>Chargement des questions...</option>
+                )}
+              </Form.Select>
+              <Form.Control.Feedback type="invalid">
+                Veuillez choisir une question de sécurité.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Réponse de sécurité</Form.Label>
-            <Form.Control
-              type="text"
-              name="securityAnswer"
-              value={formData.securityAnswer}
-              onChange={handleChange}
-              maxLength="32"
-              placeholder="Votre réponse"
-              required
-            />
-            <Form.Control.Feedback type="invalid">
-              Veuillez entrer une réponse de sécurité.
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                  type="text"
+                  name="securityAnswer"
+                  value={formData.securityAnswer}
+                  onChange={handleChange}
+                  maxLength="32"
+                  placeholder="Votre réponse"
+                  required
+              />
+              <Form.Control.Feedback type="invalid">
+                Veuillez entrer une réponse de sécurité.
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
