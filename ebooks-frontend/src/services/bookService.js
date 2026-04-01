@@ -6,6 +6,25 @@ export const bookService = {
     return response.data;
   },
 
+  searchBooks: async (query) => {
+    const response = await api.get('/api/rest/books/search', {
+      params: { q: query }
+    });
+    return response.data;
+  },
+
+  getBooksByCategory: async (category) => {
+    const response = await api.get(`/api/rest/books/category/${category}`);
+    return response.data;
+  },
+
+  searchBooksByCategory: async (category, query) => {
+    const response = await api.get(`/api/rest/books/category/${category}/search`, {
+      params: { q: query }
+    });
+    return response.data;
+  },
+
   getBookById: async (id) => {
     const response = await api.get(`/api/rest/books/${id}`);
     return response.data;

@@ -51,6 +51,22 @@ public class BookService implements IBookService {
 	}
 
 	@Override
+	public List<Book> searchBooks(String query) throws Exception {
+		return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(query, query);
+	}
+
+	@Override
+	public List<Book> getBooksByCategory(String category) throws Exception {
+		return bookRepository.findByCategory(category);
+	}
+
+	@Override
+	public List<Book> searchBooksByCategory(String category, String query) throws Exception {
+		return bookRepository.findByCategoryAndTitleContainingIgnoreCaseOrCategoryAndAuthorContainingIgnoreCase(
+				category, query, category, query);
+	}
+
+	@Override
 	public Book updateBook(Book book) throws Exception {
 	    if (book == null) {
 	        throw new NullPointerException("Book ne doit pas être null");

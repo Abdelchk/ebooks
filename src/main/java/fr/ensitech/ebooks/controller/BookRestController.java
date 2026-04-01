@@ -121,6 +121,47 @@ public class BookRestController implements IBookController{
 
     }
 
+    @GetMapping("/search")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ResponseEntity<List<Book>> searchBooks(@RequestParam("q") String query) {
+        try {
+            List<Book> books = bookService.searchBooks(query);
+            return new ResponseEntity<>(books, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la recherche des livres : " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/category/{category}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ResponseEntity<List<Book>> getBooksByCategory(@PathVariable("category") String category) {
+        try {
+            List<Book> books = bookService.getBooksByCategory(category);
+            return new ResponseEntity<>(books, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la récupération des livres par catégorie : " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/category/{category}/search")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ResponseEntity<List<Book>> searchBooksByCategory(
+            @PathVariable("category") String category,
+            @RequestParam("q") String query) {
+        try {
+            List<Book> books = bookService.searchBooksByCategory(category, query);
+            return new ResponseEntity<>(books, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la recherche par catégorie : " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @Override
     public ResponseEntity<List<Book>> findBooksByTitleContaining(String text) {
         return null;
