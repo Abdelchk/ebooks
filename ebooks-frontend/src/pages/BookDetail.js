@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Alert, Badge } from 'react-bootstrap';
 import { bookService } from '../services/bookService';
+import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
 import './BookDetail.css';
@@ -9,15 +10,12 @@ import './BookDetail.css';
 const BookDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [book, setBook] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadBookDetails();
-  }, [id]);
-
-  const loadBookDetails = async () => {
+  const loadBookDetails = useCallback(async () => {
     try {
       const data = await bookService.getBookById(id);
       setBook(data);
@@ -27,10 +25,44 @@ const BookDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadBookDetails();
+  }, [loadBookDetails]);
 
   const handleBack = () => {
     navigate('/accueil');
+  };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      // Rediriger vers la page de connexion si non connecté
+      navigate('/login', {
+        state: {
+          from: `/book/${id}`,
+          message: 'Veuillez vous connecter pour ajouter des livres au panier.'
+        }
+      });
+    } else {
+      // TODO: Implémenter la logique d'ajout au panier
+      alert('Livre ajouté au panier !');
+    }
+  };
+
+  const handleAddToFavorites = () => {
+    if (!user) {
+      // Rediriger vers la page de connexion si non connecté
+      navigate('/login', {
+        state: {
+          from: `/book/${id}`,
+          message: 'Veuillez vous connecter pour ajouter des livres aux favoris.'
+        }
+      });
+    } else {
+      // TODO: Implémenter la logique d'ajout aux favoris
+      alert('Livre ajouté aux favoris !');
+    }
   };
 
   if (loading) {
@@ -144,10 +176,10 @@ const BookDetail = () => {
               <div className="book-actions mt-4">
                 {book.quantity > 0 ? (
                   <>
-                    <Button variant="primary" size="lg" className="me-2">
+                    <Button variant="primary" size="lg" className="me-2" onClick={handleAddToCart}>
                       <i className="bi bi-cart-plus me-2"></i>Ajouter au panier
                     </Button>
-                    <Button variant="outline-secondary" size="lg">
+                    <Button variant="outline-secondary" size="lg" onClick={handleAddToFavorites}>
                       <i className="bi bi-heart me-2"></i>Ajouter aux favoris
                     </Button>
                   </>

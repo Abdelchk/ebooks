@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navbar';
@@ -13,6 +13,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const location = useLocation();
+  const message = location.state?.message;
+  const from = location.state?.from || '/accueil';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,8 +43,8 @@ const Login = () => {
           console.log('🔐 2FA requis, redirection vers /verify-code');
           navigate('/verify-code');
         } else {
-          console.log('✅ Pas de 2FA requis, redirection vers /accueil');
-          navigate('/accueil');
+          console.log('✅ Pas de 2FA requis, redirection vers', from);
+          navigate(from, { replace: true });
         }
       } else {
         console.error('❌ Connexion échouée:', response);
@@ -65,6 +68,7 @@ const Login = () => {
       <Container>
         <h2 className="mt-5">Connexion</h2>
 
+        {message && <Alert variant="info">{message}</Alert>}
         {error && <Alert variant="danger">{error}</Alert>}
 
         <Form noValidate validated={validated} onSubmit={handleSubmit}>
