@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 
 import CartCounter from "./CartCounter";
@@ -50,18 +50,37 @@ const Navigation = () => {
                   Panier
                   <CartCounter />
                 </Nav.Link>
-                <Nav.Link as={Link} to="/reservations">
-                  <i className="bi bi-bookmark-fill me-1"></i>
-                  Réservations
-                </Nav.Link>
-                <Nav.Link as={Link} to="/loans">
-                  <i className="bi bi-book me-1"></i>
-                  Emprunts
-                </Nav.Link>
-                <Nav.Link as={Link} to="/update-password">
-                  <i className="bi bi-key-fill me-1"></i>
-                  Mot de passe
-                </Nav.Link>
+                <NavDropdown
+                  title={
+                    <>
+                      <i className="bi bi-person-circle me-1"></i>
+                      Profil
+                    </>
+                  }
+                  id="profile-dropdown"
+                >
+                  <NavDropdown.Item as={Link} to="/profile#info">
+                    <i className="bi bi-person-fill me-2"></i>
+                    Informations
+                  </NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/profile#reservations">
+                    <i className="bi bi-bookmark-fill me-2"></i>
+                    Réservations
+                  </NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/profile#loans">
+                    <i className="bi bi-book me-2"></i>
+                    Emprunts
+                  </NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/profile#alerts">
+                    <i className="bi bi-bell-fill me-2"></i>
+                    Alertes
+                  </NavDropdown.Item>
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item as={Link} to="/update-password">
+                    <i className="bi bi-key-fill me-2"></i>
+                    Changer le mot de passe
+                  </NavDropdown.Item>
+                </NavDropdown>
                 <Button
                   variant="link"
                   className="nav-link text-white"

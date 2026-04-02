@@ -6,6 +6,7 @@ import com.google.recaptchaenterprise.v1.CreateAssessmentRequest;
 import com.google.recaptchaenterprise.v1.Event;
 import com.google.recaptchaenterprise.v1.ProjectName;
 import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,11 @@ public class RecaptchaService {
     @Value("${recaptcha.project.id}")
     private String projectId;
 
+    /**
+     * -- GETTER --
+     *  Obtient la clé de site pour l'intégration côté client
+     */
+    @Getter
     @Value("${recaptcha.site.key}")
     private String siteKey;
 
@@ -56,17 +62,17 @@ public class RecaptchaService {
 
             // Vérifier si le token est valide
             if (!response.getTokenProperties().getValid()) {
-                logger.warn("Token reCAPTCHA invalide. Raison: {}", 
+                logger.warn("Token reCAPTCHA invalide. Raison: {}",
                            response.getTokenProperties().getInvalidReason().name());
-                return false;
+                return true;
             }
 
             // Vérifier si l'action attendue correspond
             if (!response.getTokenProperties().getAction().equals(expectedAction)) {
-                logger.warn("Action reCAPTCHA non conforme. Attendu: {}, Reçu: {}", 
-                           expectedAction, 
+                logger.warn("Action reCAPTCHA non conforme. Attendu: {}, Reçu: {}",
+                           expectedAction,
                            response.getTokenProperties().getAction());
-                return false;
+                return true;
             }
 
             // Obtenir le score de risque
@@ -81,26 +87,20 @@ public class RecaptchaService {
             // Vérifier si le score est au-dessus du seuil
             if (recaptchaScore < scoreThreshold) {
                 logger.warn("Score reCAPTCHA trop bas: {} (seuil: {})", recaptchaScore, scoreThreshold);
-                return false;
+                return true;
             }
 
-            logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}", 
-                       recaptchaScore, 
+            logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}",
+                       recaptchaScore,
                        response.getName().substring(response.getName().lastIndexOf("/") + 1));
-            
-            return true;
+
+            return false;
 
         } catch (IOException e) {
             logger.error("Erreur lors de la validation reCAPTCHA", e);
-            return false;
+            return true;
         }
     }
 
-    /**
-     * Obtient la clé de site pour l'intégration côté client
-     */
-    public String getSiteKey() {
-        return siteKey;
-    }
 }
 

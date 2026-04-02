@@ -7,6 +7,8 @@ import fr.ensitech.ebooks.service.RecaptchaService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,8 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/auth")
 public class AuthRestController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthRestController.class);
 
     @Autowired
     private IUserService userService;
@@ -151,11 +155,14 @@ public class AuthRestController {
                     .body(Map.of("success", false, "message", "Veuillez valider le reCAPTCHA"));
             }
 
-            if (!recaptchaService.verifyToken(request.getRecaptchaToken(), "REGISTER")) {
+            // Valider le token reCAPTCHA
+            boolean isTokenValid = recaptchaService.verifyToken(request.getRecaptchaToken(), "REGISTER");
+            if (!isTokenValid) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("success", false, "message", "La vérification reCAPTCHA a échoué"));
             }
 
+            // Token reCAPTCHA valide, créer l'utilisateur
             User user = new User();
             user.setFirstname(request.getFirstname());
             user.setLastname(request.getLastname());
@@ -345,18 +352,16 @@ public class AuthRestController {
     public ResponseEntity<?> updatePassword(@RequestBody UpdatePasswordRequest request,
                                            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            System.out.println("=== DEBUG update-password ===");
-            System.out.println("User: " + userDetails.getUsername());
-            System.out.println("Request: " + request);
-            
+            logger.debug("Tentative de mise à jour du mot de passe pour l'utilisateur: {}", userDetails.getUsername());
+
             User user = userService.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
             
-            System.out.println("User found: " + user.getEmail());
-            
+            logger.debug("Utilisateur trouvé: {}", user.getEmail());
+
             SecurityQuestions securityQuestion = userService.getSecurityQuestionForUser(user);
-            System.out.println("Security question ID: " + securityQuestion.getId());
-            
+            logger.debug("Question de sécurité ID: {}", securityQuestion.getId());
+
             boolean success = userService.updatePassword(
                 user,
                 request.getOldPassword(),
@@ -373,13 +378,11 @@ public class AuthRestController {
                     .body(Map.of("success", false, "message", "Erreur lors de la mise à jour"));
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("Erreur updatePassword: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la mise à jour du mot de passe : {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
-            System.err.println("Erreur serveur updatePassword: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur serveur lors de la mise à jour du mot de passe", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("success", false, "message", "Erreur serveur: " + e.getMessage()));
         }

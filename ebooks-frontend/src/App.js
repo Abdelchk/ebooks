@@ -20,6 +20,7 @@ import About from './pages/About';
 import Cart from "./pages/Cart";
 import Reservations from './pages/Reservations';
 import Loans from './pages/Loans';
+import Profile from './pages/Profile';
 
 // Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -52,6 +53,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Cart />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Profile />
                 </PrivateRoute>
               }
             />

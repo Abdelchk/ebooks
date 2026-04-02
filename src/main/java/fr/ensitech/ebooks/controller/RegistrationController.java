@@ -2,9 +2,7 @@ package fr.ensitech.ebooks.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,10 +22,10 @@ public class RegistrationController {
 
     private static final Logger logger = LoggerFactory.getLogger(RegistrationController.class);
 
-    @Autowired
+    //@Autowired
     private UserService userService;
 
-    @Autowired
+    //@Autowired
     private RecaptchaService recaptchaService;
 
     /**
@@ -76,7 +74,8 @@ public class RegistrationController {
             return "register";
         }
 
-        if (!recaptchaService.verifyToken(recaptchaToken, "REGISTER")) {
+        boolean isTokenValid = recaptchaService.verifyToken(recaptchaToken, "REGISTER");
+        if (!isTokenValid) {
             model.addAttribute("error", "La vérification reCAPTCHA a échoué. Veuillez réessayer.");
             model.addAttribute("questions", userService.getAllSecurityQuestions());
             model.addAttribute("recaptchaSiteKey", recaptchaService.getSiteKey());

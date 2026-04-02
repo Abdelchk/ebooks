@@ -1,0 +1,15 @@
+.confirmation-modal .modal-header.bg-success,
+.confirmation-modal .modal-header.bg-danger,
+.confirmation-modal .modal-header.bg-warning,
+.confirmation-modal .modal-header.bg-primary {
+  border-bottom: none;
+}
+
+.confirmation-modal .modal-header .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.confirmation-modal .modal-body i.bi {
+  display: inline-block;
+}
+

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Alert, Badge, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { cartService } from '../services/cartService';
 import { reservationService } from '../services/reservationService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
 import LoanDurationSelector from '../components/LoanDurationSelector';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
 import './Cart.css';
 
 const Cart = () => {
@@ -15,16 +17,15 @@ const Cart = () => {
   const [error, setError] = useState('');
   const [validating, setValidating] = useState(false);
 
-  // États pour les modals
-  const [showRemoveModal, setShowRemoveModal] = useState(false);
-  const [showClearModal, setShowClearModal] = useState(false);
-  const [showValidateModal, setShowValidateModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // États pour les modals (simplifié)
+  const [currentModal, setCurrentModal] = useState(null);
+  const [modalConfig, setModalConfig] = useState(null);
   const [itemToRemove, setItemToRemove] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    loadCart();
+    loadCart().catch(err => {
+      console.error('Erreur lors du chargement initial du panier:', err);
+    });
   }, []);
 
   const loadCart = async () => {
@@ -39,40 +40,52 @@ const Cart = () => {
     }
   };
 
+  const showModal = (type, params = {}) => {
+    setCurrentModal(type);
+    setModalConfig(getModalConfig(type, params));
+  };
+
+  const hideModal = () => {
+    setCurrentModal(null);
+    setModalConfig(null);
+  };
+
   const handleRemove = async (cartItemId) => {
     setItemToRemove(cartItemId);
-    setShowRemoveModal(true);
+    showModal(MODAL_TYPES.CONFIRM_REMOVE_ITEM);
   };
 
   const confirmRemove = async () => {
     try {
       await cartService.removeFromCart(itemToRemove);
       setCartItems(cartItems.filter(item => item.id !== itemToRemove));
-      setShowRemoveModal(false);
+      hideModal();
       setItemToRemove(null);
-      setSuccessMessage('Article retiré du panier avec succès');
-      setShowSuccessModal(true);
+      showModal(MODAL_TYPES.SUCCESS_GENERIC, {
+        message: 'Article retiré du panier avec succès'
+      });
     } catch (err) {
       setError('Erreur lors de la suppression');
-      setShowRemoveModal(false);
+      hideModal();
       console.error(err);
     }
   };
 
   const handleClearCart = () => {
-    setShowClearModal(true);
+    showModal(MODAL_TYPES.CONFIRM_CLEAR_CART);
   };
 
   const confirmClearCart = async () => {
     try {
       await cartService.clearCart();
       setCartItems([]);
-      setShowClearModal(false);
-      setSuccessMessage('Panier vidé avec succès');
-      setShowSuccessModal(true);
+      hideModal();
+      showModal(MODAL_TYPES.SUCCESS_GENERIC, {
+        message: 'Panier vidé avec succès'
+      });
     } catch (err) {
       setError('Erreur lors du vidage du panier');
-      setShowClearModal(false);
+      hideModal();
       console.error(err);
     }
   };
@@ -83,8 +96,9 @@ const Cart = () => {
       setCartItems(cartItems.map(item =>
         item.id === cartItemId ? { ...item, loanDuration: newDuration } : item
       ));
-      setSuccessMessage('Durée d\'emprunt mise à jour');
-      setShowSuccessModal(true);
+      showModal(MODAL_TYPES.SUCCESS_GENERIC, {
+        message: 'Durée d\'emprunt mise à jour'
+      });
     } catch (err) {
       setError('Erreur lors de la mise à jour');
       console.error(err);
@@ -96,17 +110,16 @@ const Cart = () => {
       setError('Votre panier est vide');
       return;
     }
-    setShowValidateModal(true);
+    showModal(MODAL_TYPES.CONFIRM_VALIDATE_CART, { count: cartItems.length });
   };
 
   const confirmValidateCart = async () => {
     try {
       setValidating(true);
       setError('');
-      setShowValidateModal(false);
+      hideModal();
       await reservationService.validateCart();
-      setSuccessMessage('Réservations créées avec succès ! Vous avez 72h pour retirer vos livres.');
-      setShowSuccessModal(true);
+      showModal(MODAL_TYPES.SUCCESS_CART_VALIDATED);
       setTimeout(() => {
         navigate('/reservations');
       }, 2000);
@@ -114,6 +127,26 @@ const Cart = () => {
       setError(err.response?.data?.message || 'Erreur lors de la validation du panier');
     } finally {
       setValidating(false);
+    }
+  };
+
+  const handleModalConfirm = () => {
+    switch (currentModal) {
+      case MODAL_TYPES.CONFIRM_REMOVE_ITEM:
+        confirmRemove();
+        break;
+      case MODAL_TYPES.CONFIRM_CLEAR_CART:
+        confirmClearCart();
+        break;
+      case MODAL_TYPES.CONFIRM_VALIDATE_CART:
+        confirmValidateCart();
+        break;
+      case MODAL_TYPES.SUCCESS_GENERIC:
+      case MODAL_TYPES.SUCCESS_CART_VALIDATED:
+        hideModal();
+        break;
+      default:
+        hideModal();
     }
   };
 
@@ -235,110 +268,13 @@ const Cart = () => {
           </>
         )}
 
-        {/* Modal de confirmation de retrait d'article */}
-        <Modal show={showRemoveModal} onHide={() => setShowRemoveModal(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <i className="bi bi-exclamation-triangle text-warning me-2"></i>
-              Confirmer la suppression
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            Êtes-vous sûr de vouloir retirer cet article de votre panier ?
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowRemoveModal(false)}>
-              <i className="bi bi-x-circle me-1"></i>
-              Annuler
-            </Button>
-            <Button variant="danger" onClick={confirmRemove}>
-              <i className="bi bi-trash me-1"></i>
-              Retirer
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Modal de confirmation de vidage du panier */}
-        <Modal show={showClearModal} onHide={() => setShowClearModal(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <i className="bi bi-exclamation-triangle text-warning me-2"></i>
-              Vider le panier
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p className="mb-0">
-              Êtes-vous sûr de vouloir vider tout votre panier ?
-            </p>
-            <p className="text-danger mb-0">
-              <strong>Cette action est irréversible.</strong>
-            </p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowClearModal(false)}>
-              <i className="bi bi-x-circle me-1"></i>
-              Annuler
-            </Button>
-            <Button variant="danger" onClick={confirmClearCart}>
-              <i className="bi bi-trash me-1"></i>
-              Vider le panier
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Modal de confirmation de validation du panier */}
-        <Modal show={showValidateModal} onHide={() => setShowValidateModal(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <i className="bi bi-check-circle text-primary me-2"></i>
-              Valider le panier
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>
-              Vous êtes sur le point de créer <strong>{cartItems.length}</strong> réservation(s).
-            </p>
-            <Alert variant="info" className="mb-0">
-              <i className="bi bi-info-circle me-2"></i>
-              Vous aurez <strong>72 heures</strong> pour retirer vos livres à la bibliothèque.
-              Passé ce délai, les réservations seront automatiquement annulées.
-            </Alert>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowValidateModal(false)}>
-              <i className="bi bi-x-circle me-1"></i>
-              Annuler
-            </Button>
-            <Button variant="primary" onClick={confirmValidateCart}>
-              <i className="bi bi-check-circle me-1"></i>
-              Confirmer
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Modal de succès */}
-        <Modal
-          show={showSuccessModal}
-          onHide={() => setShowSuccessModal(false)}
-          centered
-          backdrop="static"
-        >
-          <Modal.Header closeButton className="bg-success text-white">
-            <Modal.Title>
-              <i className="bi bi-check-circle-fill me-2"></i>
-              Succès
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="text-center py-4">
-            <i className="bi bi-check-circle text-success" style={{ fontSize: '4rem' }}></i>
-            <p className="mt-3 mb-0 fs-5">{successMessage}</p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="success" onClick={() => setShowSuccessModal(false)} className="w-100">
-              OK
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        {/* Modal générique */}
+        <ConfirmationModal
+          show={currentModal !== null}
+          onHide={hideModal}
+          onConfirm={handleModalConfirm}
+          config={modalConfig}
+        />
       </Container>
     </>
   );
