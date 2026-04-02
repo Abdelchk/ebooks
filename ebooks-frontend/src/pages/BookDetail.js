@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Alert, Badge } from 'react-bootstrap';
+import {Container, Row, Col, Card, Button, Alert, Badge, Modal} from 'react-bootstrap';
 import { bookService } from '../services/bookService';
+import { cartService } from '../services/cartService';
+import { stockAlertService } from '../services/stockAlertService';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navbar';
+import LoanDurationSelector from "../components/LoanDurationSelector";
 import Loader from '../components/Loader';
 import './BookDetail.css';
 
@@ -14,6 +17,12 @@ const BookDetail = () => {
   const [book, setBook] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loanDuration, setLoanDuration] = useState(14);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showAddToCartModal, setShowAddToCartModal] = useState(false);
+  const [showStockAlertModal, setShowStockAlertModal] = useState(false);
 
   const loadBookDetails = useCallback(async () => {
     try {
@@ -35,7 +44,7 @@ const BookDetail = () => {
     navigate('/accueil');
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!user) {
       // Rediriger vers la page de connexion si non connecté
       navigate('/login', {
@@ -44,24 +53,47 @@ const BookDetail = () => {
           message: 'Veuillez vous connecter pour ajouter des livres au panier.'
         }
       });
-    } else {
-      // TODO: Implémenter la logique d'ajout au panier
-      alert('Livre ajouté au panier !');
+      return;
+    }
+    setShowAddToCartModal(true);
+  };
+
+  const confirmAddToCart = async () => {
+    try {
+      setAddingToCart(true);
+      setShowAddToCartModal(false);
+      await cartService.addToCart(book.id, loanDuration);
+      setSuccessMessage(`"${book.title}" a été ajouté au panier pour ${loanDuration} jours !`);
+      setShowSuccessModal(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de l\'ajout au panier');
+    } finally {
+      setAddingToCart(false);
     }
   };
 
-  const handleAddToFavorites = () => {
+  const handleStockAlert = () => {
     if (!user) {
-      // Rediriger vers la page de connexion si non connecté
       navigate('/login', {
         state: {
           from: `/book/${id}`,
-          message: 'Veuillez vous connecter pour ajouter des livres aux favoris.'
+          message: 'Veuillez vous connecter pour recevoir des alertes de disponibilité.'
         }
       });
-    } else {
-      // TODO: Implémenter la logique d'ajout aux favoris
-      alert('Livre ajouté aux favoris !');
+      return;
+    }
+    setShowStockAlertModal(true);
+  };
+
+  const confirmStockAlert = async () => {
+    try {
+      setShowStockAlertModal(false);
+      await stockAlertService.createAlert(book.id);
+      setSuccessMessage(`Vous serez notifié par email à ${user.email} dès que "${book.title}" sera de nouveau disponible.`);
+      setShowSuccessModal(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de la création de l\'alerte');
+      console.error(err);
     }
   };
 
@@ -173,20 +205,45 @@ const BookDetail = () => {
                 </div>
               )}
 
+              {user && book.quantity > 0 && (
+                <div className="loan-duration-section mt-4">
+                  <h5>
+                    <i className="bi bi-calendar-range me-2"></i>
+                    Durée d'emprunt souhaitée
+                  </h5>
+                  <LoanDurationSelector
+                    value={loanDuration}
+                    onChange={setLoanDuration}
+                  />
+                </div>
+              )}
+
               <div className="book-actions mt-4">
                 {book.quantity > 0 ? (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="me-2"
+                    onClick={handleAddToCart}
+                    disabled={addingToCart}
+                  >
+                    <i className="bi bi-cart-plus me-2"></i>
+                    {addingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
+                  </Button>
+                ) : (
                   <>
-                    <Button variant="primary" size="lg" className="me-2" onClick={handleAddToCart}>
-                      <i className="bi bi-cart-plus me-2"></i>Ajouter au panier
+                    <Button variant="secondary" size="lg" disabled className="me-2">
+                      <i className="bi bi-x-circle me-2"></i>Indisponible
                     </Button>
-                    <Button variant="outline-secondary" size="lg" onClick={handleAddToFavorites}>
-                      <i className="bi bi-heart me-2"></i>Ajouter aux favoris
+                    <Button
+                      variant="warning"
+                      size="lg"
+                      onClick={handleStockAlert}
+                    >
+                      <i className="bi bi-bell me-2"></i>
+                      M'alerter quand disponible
                     </Button>
                   </>
-                ) : (
-                  <Button variant="secondary" size="lg" disabled>
-                    <i className="bi bi-x-circle me-2"></i>Indisponible
-                  </Button>
                 )}
               </div>
             </div>
@@ -216,6 +273,91 @@ const BookDetail = () => {
             </Card>
           </Col>
         </Row>
+
+        {/* Modal de confirmation d'ajout au panier */}
+        <Modal show={showAddToCartModal} onHide={() => setShowAddToCartModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              <i className="bi bi-cart-plus text-primary me-2"></i>
+              Ajouter au panier
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              Vous êtes sur le point d'ajouter <strong>"{book?.title}"</strong> à votre panier.
+            </p>
+            <Alert variant="info" className="mb-0">
+              <i className="bi bi-calendar-range me-2"></i>
+              Durée d'emprunt : <strong>{loanDuration} jours</strong>
+            </Alert>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowAddToCartModal(false)}>
+              <i className="bi bi-x-circle me-1"></i>
+              Annuler
+            </Button>
+            <Button variant="primary" onClick={confirmAddToCart}>
+              <i className="bi bi-check-circle me-1"></i>
+              Confirmer
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal de confirmation d'alerte de stock */}
+        <Modal show={showStockAlertModal} onHide={() => setShowStockAlertModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              <i className="bi bi-bell text-warning me-2"></i>
+              Alerte de disponibilité
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              <strong>"{book?.title}"</strong> est actuellement en rupture de stock.
+            </p>
+            <Alert variant="info">
+              <i className="bi bi-envelope me-2"></i>
+              Vous recevrez un email à <strong>{user?.email}</strong> dès que ce livre sera de nouveau disponible.
+            </Alert>
+            <p className="text-muted mb-0">
+              <small>Vous pouvez annuler cette alerte à tout moment depuis votre profil.</small>
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowStockAlertModal(false)}>
+              <i className="bi bi-x-circle me-1"></i>
+              Annuler
+            </Button>
+            <Button variant="warning" onClick={confirmStockAlert}>
+              <i className="bi bi-bell me-1"></i>
+              Activer l'alerte
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal de succès */}
+        <Modal
+          show={showSuccessModal}
+          onHide={() => setShowSuccessModal(false)}
+          centered
+          backdrop="static"
+        >
+          <Modal.Header closeButton className="bg-success text-white">
+            <Modal.Title>
+              <i className="bi bi-check-circle-fill me-2"></i>
+              Succès
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="text-center py-4">
+            <i className="bi bi-check-circle text-success" style={{ fontSize: '4rem' }}></i>
+            <p className="mt-3 mb-0 fs-6">{successMessage}</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="success" onClick={() => setShowSuccessModal(false)} className="w-100">
+              OK
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </>
   );

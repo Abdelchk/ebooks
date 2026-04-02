@@ -82,8 +82,28 @@ public class BookService implements IBookService {
 	        throw new IllegalArgumentException("Le livre n'existe pas");
 	    }
 
+	    // Récupérer l'ancien livre pour comparer le stock
+	    Book oldBook = bookRepository.findById(book.getId())
+	            .orElseThrow(() -> new IllegalArgumentException("Le livre n'existe pas"));
+
+	    boolean wasOutOfStock = oldBook.getQuantity() <= 0;
+	    boolean nowInStock = book.getQuantity() > 0;
+
 	    // Save the updated book
-	    return bookRepository.save(book);
+	    Book updatedBook = bookRepository.save(book);
+
+	    // Notifier les utilisateurs si le livre est de nouveau en stock
+	    if (wasOutOfStock && nowInStock) {
+			IStockAlertService stockAlertService = new StockAlertService();
+	        try {
+	            stockAlertService.notifyUsersForBook(book.getId());
+	        } catch (Exception e) {
+	            // Log l'erreur mais ne pas faire échouer la mise à jour
+	            System.err.println("Erreur lors de la notification des alertes: " + e.getMessage());
+	        }
+	    }
+
+	    return updatedBook;
 	}
 
 

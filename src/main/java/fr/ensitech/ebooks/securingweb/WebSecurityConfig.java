@@ -79,7 +79,11 @@ public class WebSecurityConfig {
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth
                     // Autoriser les endpoints publics de l'API REST
-                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all").permitAll()
+                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()
+                    // Endpoints protégés nécessitant authentification
+                    .requestMatchers("/api/rest/cart/**").authenticated()
+                    .requestMatchers("/api/rest/reservations/**").authenticated()
+                    .requestMatchers("/api/rest/loans/**").authenticated()
                     // Endpoints nécessitant l'authentification
                     .requestMatchers("/api/rest/**").authenticated()
                     // Tout le reste nécessite une authentification
