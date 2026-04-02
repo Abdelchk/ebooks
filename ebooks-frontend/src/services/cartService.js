@@ -1,7 +1,7 @@
 import api from './api';
 
 export const cartService = {
-    getCart: async (id) => {
+    getCart: async () => {
         const response = await api.get('/api/rest/cart');
         return response.data;
     },
