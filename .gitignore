@@ -3,12 +3,21 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Sensitive Files ###
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+src/main/resources/application-*.yml
 
 ### Documentation ###
 # Ignorer tous les fichiers .md sauf README.md
 *.md
 !README.md
+!SECURITY_CONFIG.md
 
 ### STS ###
 .apt_generated
