@@ -79,12 +79,13 @@ const Reservations = ({ embedded = false }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      PENDING: { bg: 'primary', text: '📌 En attente' },
-      CANCELLED: { bg: 'secondary', text: '❌ Annulée' },
-      EXPIRED: { bg: 'warning', text: '⏰ Expirée' },
-      CONVERTED: { bg: 'success', text: '✓ Convertie en emprunt' }
+      PENDING:   { bg: 'warning',   text: 'En attente', icon: 'clock-history' },
+      VALIDATED: { bg: 'info',      text: 'Prête à retirer', icon: 'bag-check' },
+      CANCELLED: { bg: 'secondary', text: 'Annulée', icon: 'x-circle' },
+      EXPIRED:   { bg: 'danger',    text: 'Expirée', icon: 'alarm' },
+      CONVERTED: { bg: 'success',   text: 'Emprunt en cours', icon: 'book' }
     };
-    return badges[status] || { bg: 'secondary', text: status };
+    return badges[status] || { bg: 'secondary', text: status, icon: 'info-circle' };
   };
 
   const getTimeRemaining = (expirationDate) => {
@@ -107,11 +108,17 @@ const Reservations = ({ embedded = false }) => {
 
   const filteredReservations = reservations.filter(res => {
     if (filter === 'all') return true;
-    if (filter === 'pending') return res.status === 'PENDING';
+    if (filter === 'pending') return res.status === 'PENDING' || res.status === 'VALIDATED';
     if (filter === 'cancelled') return res.status === 'CANCELLED';
     if (filter === 'expired') return res.status === 'EXPIRED';
     if (filter === 'converted') return res.status === 'CONVERTED';
     return true;
+  });
+
+  const sortedFilteredReservations = [...filteredReservations].sort((a, b) => {
+    const firstDate = new Date(a.reservationDate || a.createdAt || 0).getTime();
+    const secondDate = new Date(b.reservationDate || b.createdAt || 0).getTime();
+    return secondDate - firstDate;
   });
 
   if (loading) {
@@ -166,22 +173,19 @@ const Reservations = ({ embedded = false }) => {
         </Button>
       </ButtonGroup>
 
-      {filteredReservations.length === 0 ? (
+      {sortedFilteredReservations.length === 0 ? (
         <Alert variant="info">
           <i className="bi bi-info-circle me-2"></i>
           Aucune réservation {filter !== 'all' && `avec le statut "${filter}"`}.
         </Alert>
       ) : (
         <Row>
-          {filteredReservations.map((reservation) => (
+          {sortedFilteredReservations.map((reservation) => {
+            const badgeInfo = getStatusBadge(reservation.status);
+
+            return (
             <Col md={6} lg={4} key={reservation.id} className="mb-4">
               <Card className="reservation-card h-100">
-                <div className="status-ribbon">
-                  <Badge bg={getStatusBadge(reservation.status).bg}>
-                    {getStatusBadge(reservation.status).text}
-                  </Badge>
-                </div>
-
                 <Card.Img
                   variant="top"
                   src={reservation.book.coverImageUrl}
@@ -190,6 +194,14 @@ const Reservations = ({ embedded = false }) => {
                 />
 
                 <Card.Body>
+                  {/* Badge statut en haut du corps — plus de positionnement absolu */}
+                  <div className="mb-2">
+                    <Badge bg={badgeInfo.bg} className="status-badge">
+                      <i className={`bi bi-${badgeInfo.icon} me-1`}></i>
+                      {badgeInfo.text}
+                    </Badge>
+                  </div>
+
                   <Card.Title>{reservation.book.title}</Card.Title>
                   <Card.Text className="text-muted">
                     <i className="bi bi-person-fill me-1"></i>
@@ -255,7 +267,8 @@ const Reservations = ({ embedded = false }) => {
                 </Card.Body>
               </Card>
             </Col>
-          ))}
+            );
+          })}
         </Row>
       )}
 

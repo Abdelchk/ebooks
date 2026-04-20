@@ -3,6 +3,8 @@ import { Container, Row, Col, Card, Button, Alert, Badge, ButtonGroup, ProgressB
 import { loanService } from '../services/loanService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
 import './Loans.css';
 
 const Loans = ({ embedded = false }) => {
@@ -10,6 +12,26 @@ const Loans = ({ embedded = false }) => {
   const [filter, setFilter] = useState('active');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // État modales
+  const [currentModal, setCurrentModal] = useState(null);
+  const [modalConfig, setModalConfig] = useState(null);
+  const [pendingLoanId, setPendingLoanId] = useState(null);
+  const [pendingIsOverdue, setPendingIsOverdue] = useState(false);
+
+  const showModal = (type, loanId = null, isOverdue = false) => {
+    setCurrentModal(type);
+    setModalConfig(getModalConfig(type));
+    setPendingLoanId(loanId);
+    setPendingIsOverdue(isOverdue);
+  };
+
+  const hideModal = () => {
+    setCurrentModal(null);
+    setModalConfig(null);
+    setPendingLoanId(null);
+    setPendingIsOverdue(false);
+  };
 
   useEffect(() => {
     loadLoans().catch(err => {
@@ -29,45 +51,59 @@ const Loans = ({ embedded = false }) => {
     }
   };
 
-  const handleExtend = async (loanId) => {
-    if (!window.confirm('Prolonger cet emprunt de 7 jours ?')) {
-      return;
-    }
-
-    try {
-      await loanService.extendLoan(loanId);
-      loadLoans();
-      alert('Emprunt prolongé de 7 jours avec succès !');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Erreur lors de la prolongation');
-    }
+  const handleExtend = (loanId) => {
+    showModal(MODAL_TYPES.CONFIRM_EXTEND_LOAN, loanId);
   };
 
-  const handleReturn = async (loanId) => {
-    if (!window.confirm('Confirmer le retour de ce livre ?')) {
-      return;
-    }
+  const handleReturn = (loanId, isOverdue) => {
+    const type = isOverdue ? MODAL_TYPES.CONFIRM_RETURN_LOAN_OVERDUE : MODAL_TYPES.CONFIRM_RETURN_LOAN;
+    showModal(type, loanId, isOverdue);
+  };
 
+  const handleModalConfirm = async () => {
+    hideModal();
     try {
-      await loanService.returnLoan(loanId);
-      loadLoans();
-      alert('Retour enregistré avec succès !');
+      if (currentModal === MODAL_TYPES.CONFIRM_EXTEND_LOAN) {
+        await loanService.extendLoan(pendingLoanId);
+        setError('');
+        showModal(MODAL_TYPES.SUCCESS_GENERIC);
+        setModalConfig(getModalConfig(MODAL_TYPES.SUCCESS_GENERIC, { message: 'Emprunt prolongé de 7 jours avec succès !' }));
+      } else if (
+        currentModal === MODAL_TYPES.CONFIRM_RETURN_LOAN ||
+        currentModal === MODAL_TYPES.CONFIRM_RETURN_LOAN_OVERDUE
+      ) {
+        await loanService.returnLoan(pendingLoanId);
+        setError('');
+        showModal(MODAL_TYPES.SUCCESS_GENERIC);
+        setModalConfig(
+          getModalConfig(MODAL_TYPES.SUCCESS_GENERIC, {
+            message: pendingIsOverdue
+              ? 'Retour enregistré avec succès (retard pris en compte).'
+              : 'Retour enregistré avec succès !'
+          })
+        );
+      } else if (currentModal === MODAL_TYPES.SUCCESS_GENERIC) {
+        hideModal();
+        await loadLoans();
+        return;
+      }
+      await loadLoans();
     } catch (err) {
-      alert(err.response?.data?.message || 'Erreur lors du retour');
+      setError(err.response?.data?.message || 'Erreur lors de l\'opération');
     }
   };
 
   const getStatusBadge = (loan) => {
     if (loan.status === 'RETURNED') {
-      return { bg: 'secondary', text: '✓ Rendu', icon: 'check-circle' };
+      return { bg: 'secondary', text: 'Rendu', icon: 'check-circle' };
     }
     if (loan.status === 'OVERDUE') {
-      return { bg: 'danger', text: '🚨 En retard', icon: 'exclamation-triangle' };
+      return { bg: 'danger', text: 'En retard', icon: 'exclamation-triangle' };
     }
     if (loan.status === 'EXTENDED') {
-      return { bg: 'info', text: '↻ Prolongé', icon: 'arrow-repeat' };
+      return { bg: 'info', text: 'Prolongé', icon: 'arrow-repeat' };
     }
-    return { bg: 'success', text: '✓ Actif', icon: 'check-circle' };
+    return { bg: 'success', text: 'Emprunt en cours', icon: 'book' };
   };
 
   const getDaysRemaining = (dueDate, returnDate) => {
@@ -78,9 +114,7 @@ const Loans = ({ embedded = false }) => {
     const now = new Date();
     const due = new Date(dueDate);
     const diff = due - now;
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-    return days;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
   const getDaysOverdue = (dueDate, returnDate) => {
@@ -122,6 +156,12 @@ const Loans = ({ embedded = false }) => {
     if (filter === 'returned') return loan.status === 'RETURNED';
     if (filter === 'overdue') return loan.status === 'OVERDUE';
     return true;
+  });
+
+  const sortedFilteredLoans = [...filteredLoans].sort((a, b) => {
+    const firstDate = new Date(a.loanDate || a.createdAt || 0).getTime();
+    const secondDate = new Date(b.loanDate || b.createdAt || 0).getTime();
+    return secondDate - firstDate;
   });
 
   if (loading) {
@@ -176,14 +216,14 @@ const Loans = ({ embedded = false }) => {
         </Button>
       </ButtonGroup>
 
-      {filteredLoans.length === 0 ? (
+      {sortedFilteredLoans.length === 0 ? (
         <Alert variant="info">
           <i className="bi bi-info-circle me-2"></i>
           Aucun emprunt {filter !== 'all' && `avec le statut "${filter}"`}.
         </Alert>
       ) : (
         <Row>
-          {filteredLoans.map((loan) => {
+          {sortedFilteredLoans.map((loan) => {
             const daysRemaining = getDaysRemaining(loan.dueDate, loan.returnDate);
             const daysOverdue = getDaysOverdue(loan.dueDate, loan.returnDate);
             const badgeInfo = getStatusBadge(loan);
@@ -192,13 +232,6 @@ const Loans = ({ embedded = false }) => {
             return (
               <Col md={6} lg={4} key={loan.id} className="mb-4">
                 <Card className={`loan-card h-100 ${loan.status === 'OVERDUE' ? 'overdue-card' : ''}`}>
-                  <div className="status-ribbon">
-                    <Badge bg={badgeInfo.bg}>
-                      <i className={`bi bi-${badgeInfo.icon} me-1`}></i>
-                      {badgeInfo.text}
-                    </Badge>
-                  </div>
-
                   <Card.Img
                     variant="top"
                     src={loan.book.coverImageUrl}
@@ -207,6 +240,13 @@ const Loans = ({ embedded = false }) => {
                   />
 
                   <Card.Body className="d-flex flex-column">
+                    <div className="mb-2">
+                      <Badge bg={badgeInfo.bg} className="status-badge">
+                        <i className={`bi bi-${badgeInfo.icon} me-1`}></i>
+                        {badgeInfo.text}
+                      </Badge>
+                    </div>
+
                     <Card.Title>{loan.book.title}</Card.Title>
                     <Card.Text className="text-muted mb-3">
                       <i className="bi bi-person-fill me-1"></i>
@@ -293,7 +333,7 @@ const Loans = ({ embedded = false }) => {
                         <Button
                           variant={daysOverdue > 0 ? 'danger' : 'success'}
                           size="sm"
-                          onClick={() => handleReturn(loan.id)}
+                          onClick={() => handleReturn(loan.id, daysOverdue > 0)}
                           className="w-100"
                         >
                           <i className="bi bi-check-circle me-2"></i>
@@ -308,6 +348,14 @@ const Loans = ({ embedded = false }) => {
           })}
         </Row>
       )}
+
+      {/* Modal générique */}
+      <ConfirmationModal
+        show={currentModal !== null}
+        onHide={hideModal}
+        onConfirm={handleModalConfirm}
+        config={modalConfig}
+      />
     </Container>
   );
 

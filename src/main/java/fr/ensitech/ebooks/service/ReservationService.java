@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 @Service
 public class ReservationService implements IReservationService {
 
@@ -25,6 +24,9 @@ public class ReservationService implements IReservationService {
 
     @Autowired
     private IUserRepository userRepository;
+
+    @Autowired
+    private ILoanRepository loanRepository;
 
     @Autowired
     private EmailService emailService;
@@ -159,7 +161,8 @@ public class ReservationService implements IReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new Exception("Réservation non trouvée"));
 
-        if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
+        if (reservation.getStatus() != Reservation.ReservationStatus.VALIDATED &&
+            reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
             throw new Exception("Cette réservation ne peut pas être convertie");
         }
 
@@ -167,6 +170,93 @@ public class ReservationService implements IReservationService {
         reservation.setConvertedToLoanAt(LocalDateTime.now());
 
         return reservationRepository.save(reservation);
+    }
+
+    // Nouvelles méthodes pour le bibliothécaire
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findPendingReservations() {
+        return reservationRepository.findByStatus(Reservation.ReservationStatus.PENDING);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findByStatus(Reservation.ReservationStatus status) {
+        return reservationRepository.findByStatus(status);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findAll() {
+        return reservationRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public Reservation validateReservation(Long reservationId, Long librarianId) throws Exception {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+
+        if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
+            throw new Exception("Cette réservation ne peut pas être validée");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Créer l'emprunt directement
+        Loan loan = Loan.builder()
+                .user(reservation.getUser())
+                .book(reservation.getBook())
+                .reservation(reservation)
+                .loanDate(now)
+                .dueDate(now.plusDays(reservation.getLoanDuration()))
+                .initialDuration(reservation.getLoanDuration())
+                .extensionCount(0)
+                .status(Loan.LoanStatus.ACTIVE)
+                .build();
+        loanRepository.save(loan);
+
+        // Passer directement en CONVERTED (pas de VALIDATED intermédiaire)
+        reservation.setStatus(Reservation.ReservationStatus.CONVERTED);
+        reservation.setValidatedAt(now);
+        reservation.setValidatedBy(librarianId);
+        reservation.setConvertedToLoanAt(now);
+
+        Reservation savedReservation = reservationRepository.save(reservation);
+
+        // Envoyer email de confirmation de l'emprunt
+        EmailContext emailContext = new EmailContext();
+        emailContext.setStrategy(new ReservationValidatedEmailStrategy(emailService));
+        emailContext.executeStrategy(
+                reservation.getUser().getEmail(),
+                reservation.getUser().getFirstname(),
+                reservation.getBook().getTitle()
+        );
+
+        return savedReservation;
+    }
+
+    @Override
+    @Transactional
+    public void cancelReservation(Long reservationId) throws Exception {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+
+        if (reservation.getStatus() == Reservation.ReservationStatus.CANCELLED ||
+            reservation.getStatus() == Reservation.ReservationStatus.CONVERTED) {
+            throw new Exception("Cette réservation ne peut pas être annulée");
+        }
+
+        reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
+        reservation.setCancelledAt(LocalDateTime.now());
+
+        // Réincrémenter le stock
+        Book book = reservation.getBook();
+        book.setQuantity(book.getQuantity() + 1);
+        bookRepository.save(book);
+
+        reservationRepository.save(reservation);
     }
 }
 

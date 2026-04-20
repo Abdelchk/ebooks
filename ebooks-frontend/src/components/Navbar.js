@@ -45,11 +45,32 @@ const Navigation = () => {
 
             {user && (
               <>
-                <Nav.Link as={Link} to="/cart">
-                  <i className="bi bi-cart3 me-1"></i>
-                  Panier
-                  <CartCounter />
-                </Nav.Link>
+                {/* Liens pour Bibliothécaire */}
+                {user.role === 'librarian' && (
+                  <Nav.Link as={Link} to="/librarian">
+                    <i className="bi bi-journal-check me-1"></i>
+                    Gestion Réservations
+                  </Nav.Link>
+                )}
+
+                {/* Liens pour Administrateur */}
+                {user.role === 'admin' && (
+                  <Nav.Link as={Link} to="/admin">
+                    <i className="bi bi-shield-lock me-1"></i>
+                    Administration
+                  </Nav.Link>
+                )}
+
+                {/* Liens pour Client */}
+                {user.role === 'client' && (
+                  <Nav.Link as={Link} to="/cart">
+                    <i className="bi bi-cart3 me-1"></i>
+                    Panier
+                    <CartCounter />
+                  </Nav.Link>
+                )}
+
+                {/* Menu Profil pour tous les utilisateurs connectés */}
                 <NavDropdown
                   title={
                     <>

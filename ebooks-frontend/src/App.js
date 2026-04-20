@@ -23,11 +23,15 @@ import Reservations from './pages/Reservations';
 import Loans from './pages/Loans';
 import Profile from './pages/Profile';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import LibrarianDashboard from './pages/LibrarianDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './App.css';
+import AdminRoute from "./components/AdminRoute";
+import LibrarianRoute from "./components/LibrarianRoute";
 
 function App() {
   return (
@@ -48,19 +52,35 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-                {/* Routes publiques */}
-                <Route path="/accueil" element={<Accueil />} />
-                <Route path="/book/:id" element={<BookDetail />} />
+            {/* Routes publiques */}
+            <Route path="/accueil" element={<Accueil />} />
+            <Route path="/book/:id" element={<BookDetail />} />
 
-                {/* Routes protégées */}
-                <Route
-                  path="/cart"
-                  element={
-                    <PrivateRoute>
-                      <Cart />
-                    </PrivateRoute>
-                  }
-                />
+            {/* Routes protégées */}
+            <Route
+              path="/cart"
+              element={
+                <PrivateRoute>
+                  <Cart />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/librarian"
+              element={
+                <LibrarianRoute>
+                  <LibrarianDashboard />
+                </LibrarianRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
                 <Route
                   path="/profile"
                   element={

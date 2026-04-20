@@ -162,7 +162,34 @@ public class UserController implements IUserController {
 
             userService.deleteUser(id);
 
-            return ResponseEntity.ok("Compte supprimé avec succès");
+            return ResponseEntity.ok("Compte supprimé avec succès. Un email de confirmation vous a été envoyé.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur : " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/deactivate/{id}")
+    public ResponseEntity<String> deactivateAccount(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            Optional<User> userOpt = userService.findByEmail(userDetails.getUsername());
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Utilisateur non trouvé");
+            }
+
+            User user = userOpt.get();
+
+            if (!user.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Vous ne pouvez désactiver que votre propre compte");
+            }
+
+            userService.deactivateAccount(id);
+
+            return ResponseEntity.ok("Compte désactivé avec succès. Un email de confirmation vous a été envoyé.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur : " + e.getMessage());

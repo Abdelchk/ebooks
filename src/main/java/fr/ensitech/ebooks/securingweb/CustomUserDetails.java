@@ -15,7 +15,13 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(() -> user.getRole());
+        // Spring Security requiert le préfixe ROLE_ pour hasAnyRole()
+        String role = user.getRole();
+        if (role == null || role.isBlank()) {
+            role = "client";
+        }
+        final String authority = "ROLE_" + role.toUpperCase();
+        return Collections.singleton(() -> authority);
     }
 
     @Override public String getPassword() {

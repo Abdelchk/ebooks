@@ -9,13 +9,10 @@ import fr.ensitech.ebooks.repository.ISecurityQuestionsRepository;
 import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
-import fr.ensitech.ebooks.utils.Dates;
 import fr.ensitech.ebooks.utils.PasswordEncoderFactory;
 import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,15 +111,41 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public void deleteUser(Long id) throws Exception {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable avec l'ID " + id));
+    @Transactional
+    public void deactivateAccount(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+
+        // Désactiver le compte (soft delete)
         user.setEnabled(false);
         userRepository.save(user);
 
+        // Envoyer email de confirmation de désactivation
         emailContext = new EmailContext();
         emailContext.setStrategy(new AccountDeactivatedEmailStrategy(emailService));
         emailContext.executeStrategy(user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+
+        String userEmail = user.getEmail();
+        String userFirstname = user.getFirstname();
+
+        // Supprimer d'abord les données associées
+        userSecurityAnswerRepository.findByUser(user).ifPresent(userSecurityAnswerRepository::delete);
+        verificationCodeRepository.deleteByUserId(userId);
+
+        // Supprimer définitivement l'utilisateur (hard delete)
+        userRepository.delete(user);
+
+        // Envoyer email de confirmation de suppression
+        emailContext = new EmailContext();
+        emailContext.setStrategy(new AccountDeletedEmailStrategy(emailService));
+        emailContext.executeStrategy(userEmail, userFirstname);
     }
 
 
@@ -343,12 +366,8 @@ public class UserService implements IUserService {
         User user = userOpt.get();
 
         // Vérifier que le token n'a pas expiré
-        if (user.getResetTokenExpiryDate() == null ||
-            LocalDate.now().isAfter(user.getResetTokenExpiryDate())) {
-            return false;
-        }
-
-        return true;
+        return user.getResetTokenExpiryDate() != null
+                && !LocalDate.now().isAfter(user.getResetTokenExpiryDate());
     }
 
     @Override
@@ -432,4 +451,40 @@ public class UserService implements IUserService {
         PasswordEncoder bcryptEncoder = PasswordEncoderFactory.getBCryptEncoder();
         return bcryptEncoder.matches(answer.toLowerCase().trim(), securityAnswer.getHashedAnswer());
     }
+
+    @Override
+    public List<User> findAll() {
+        return userRepository.findAll();
+    }
+
+    @Override
+    public User findById(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User updateUser(User user) throws Exception {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("Utilisateur invalide");
+        }
+
+        User existingUser = userRepository.findById(user.getId())
+            .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+
+        // Mettre à jour les champs modifiables
+        if (user.getFirstname() != null) existingUser.setFirstname(user.getFirstname());
+        if (user.getLastname() != null) existingUser.setLastname(user.getLastname());
+        if (user.getPhoneNumber() != null) existingUser.setPhoneNumber(user.getPhoneNumber());
+        if (user.getBirthdate() != null) existingUser.setBirthdate(user.getBirthdate());
+        if (user.getRole() != null) existingUser.setRole(user.getRole());
+
+        return userRepository.save(existingUser);
+    }
 }
+
+

@@ -9,5 +9,12 @@ public interface IReservationService {
     List<Reservation> getUserReservations(Long userId) throws Exception;
     void checkAndExpireReservations() throws Exception;
     Reservation convertToLoan(Long reservationId) throws Exception;
+
+    // Méthodes pour le bibliothécaire
+    List<Reservation> findPendingReservations();
+    List<Reservation> findByStatus(Reservation.ReservationStatus status);
+    List<Reservation> findAll();
+    Reservation validateReservation(Long reservationId, Long librarianId) throws Exception;
+    void cancelReservation(Long reservationId) throws Exception;
 }
 

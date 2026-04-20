@@ -117,7 +117,9 @@ public class AuthRestController {
                 response.put("email", user.getEmail());
                 response.put("firstname", user.getFirstname());
                 response.put("lastname", user.getLastname());
-                
+                response.put("role", user.getRole()); // rôle transmis au frontend
+                response.put("userId", user.getId());
+
                 // Ajouter les informations d'expiration du mot de passe
                 Map<String, Object> passwordStatus = checkPasswordExpiration(user);
                 response.put("passwordStatus", passwordStatus);

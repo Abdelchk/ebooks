@@ -12,6 +12,21 @@ export const MODAL_TYPES = {
   CONFIRM_CANCEL_ALERT: 'confirmCancelAlert',
   CONFIRM_DELETE: 'confirmDelete',
 
+  // Bibliothécaire
+  CONFIRM_VALIDATE_RESERVATION: 'confirmValidateReservation',
+  CONFIRM_REJECT_RESERVATION: 'confirmRejectReservation',
+
+  // Admin
+  CONFIRM_TOGGLE_USER_STATUS_DISABLE: 'confirmToggleUserStatusDisable',
+  CONFIRM_TOGGLE_USER_STATUS_ENABLE: 'confirmToggleUserStatusEnable',
+  CONFIRM_CHANGE_ROLE: 'confirmChangeRole',
+  CONFIRM_DELETE_USER: 'confirmDeleteUser',
+
+  // Emprunts
+  CONFIRM_EXTEND_LOAN: 'confirmExtendLoan',
+  CONFIRM_RETURN_LOAN: 'confirmReturnLoan',
+  CONFIRM_RETURN_LOAN_OVERDUE: 'confirmReturnLoanOverdue',
+
   // Modals de succès
   SUCCESS_GENERIC: 'successGeneric',
   SUCCESS_CART_VALIDATED: 'successCartValidated',
@@ -103,6 +118,131 @@ export const modalConfigs = {
     message: 'Cette action est irréversible. Êtes-vous sûr ?',
     confirmText: 'Supprimer',
     confirmIcon: 'bi-trash',
+    confirmVariant: 'danger',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  // ========== BIBLIOTHÉCAIRE ==========
+  [MODAL_TYPES.CONFIRM_VALIDATE_RESERVATION]: {
+    variant: 'success',
+    icon: 'bi-check-circle',
+    title: 'Valider la réservation',
+    message: 'Êtes-vous sûr de vouloir valider cette réservation ?',
+    subMessage: 'Un emprunt sera créé et un email de confirmation sera envoyé à l\'utilisateur.',
+    confirmText: 'Valider',
+    confirmIcon: 'bi-check-circle',
+    confirmVariant: 'success',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_REJECT_RESERVATION]: {
+    variant: 'danger',
+    icon: 'bi-x-circle',
+    title: 'Rejeter la réservation',
+    message: 'Êtes-vous sûr de vouloir rejeter cette réservation ?',
+    subMessage: 'Le stock sera remis à jour et la réservation sera annulée.',
+    subMessageVariant: 'danger',
+    confirmText: 'Rejeter',
+    confirmIcon: 'bi-x-circle',
+    confirmVariant: 'danger',
+    cancelText: 'Retour',
+    cancelIcon: 'bi-arrow-left',
+  },
+
+  // ========== ADMIN ==========
+  [MODAL_TYPES.CONFIRM_TOGGLE_USER_STATUS_DISABLE]: {
+    variant: 'warning',
+    icon: 'bi-pause-circle',
+    title: 'Désactiver le compte',
+    message: 'Êtes-vous sûr de vouloir désactiver ce compte utilisateur ?',
+    subMessage: 'L\'utilisateur ne pourra plus se connecter.',
+    subMessageVariant: 'danger',
+    confirmText: 'Désactiver',
+    confirmIcon: 'bi-pause',
+    confirmVariant: 'warning',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_TOGGLE_USER_STATUS_ENABLE]: {
+    variant: 'success',
+    icon: 'bi-play-circle',
+    title: 'Activer le compte',
+    message: 'Êtes-vous sûr de vouloir réactiver ce compte utilisateur ?',
+    confirmText: 'Activer',
+    confirmIcon: 'bi-play',
+    confirmVariant: 'success',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_CHANGE_ROLE]: {
+    variant: 'info',
+    icon: 'bi-person-gear',
+    title: 'Modifier le rôle',
+    message: (name, currentRole) => `Modifier le rôle de ${name} (actuellement : ${currentRole}) ?`,
+    confirmText: 'Confirmer',
+    confirmIcon: 'bi-person-gear',
+    confirmVariant: 'info',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_DELETE_USER]: {
+    variant: 'danger',
+    icon: 'bi-exclamation-triangle-fill',
+    title: 'Supprimer l\'utilisateur',
+    message: (name) => `Êtes-vous sûr de vouloir supprimer le compte de ${name} ?`,
+    subMessage: '⚠️ Cette action est irréversible. Toutes les données seront supprimées.',
+    subMessageVariant: 'danger',
+    confirmText: 'Supprimer définitivement',
+    confirmIcon: 'bi-trash',
+    confirmVariant: 'danger',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  // ========== EMPRUNTS ==========
+  [MODAL_TYPES.CONFIRM_EXTEND_LOAN]: {
+    variant: 'primary',
+    icon: 'bi-plus-circle',
+    title: 'Prolonger l\'emprunt',
+    message: 'Souhaitez-vous prolonger cet emprunt de 7 jours supplémentaires ?',
+    alert: {
+      variant: 'info',
+      icon: 'bi-info-circle',
+      text: 'La prolongation est limitée à 2 fois par emprunt.',
+    },
+    confirmText: 'Prolonger (+7 jours)',
+    confirmIcon: 'bi-plus-circle',
+    confirmVariant: 'primary',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_RETURN_LOAN]: {
+    variant: 'success',
+    icon: 'bi-check-circle',
+    title: 'Retourner le livre',
+    message: 'Confirmez-vous le retour de ce livre ?',
+    confirmText: 'Confirmer le retour',
+    confirmIcon: 'bi-check-circle',
+    confirmVariant: 'success',
+    cancelText: 'Annuler',
+    cancelIcon: 'bi-x-circle',
+  },
+
+  [MODAL_TYPES.CONFIRM_RETURN_LOAN_OVERDUE]: {
+    variant: 'danger',
+    icon: 'bi-exclamation-triangle',
+    title: 'Retourner le livre (en retard)',
+    message: 'Confirmez-vous le retour de ce livre en retard ?',
+    subMessage: 'Ce retour sera enregistré comme tardif.',
+    subMessageVariant: 'danger',
+    confirmText: 'Confirmer le retour',
+    confirmIcon: 'bi-check-circle',
     confirmVariant: 'danger',
     cancelText: 'Annuler',
     cancelIcon: 'bi-x-circle',

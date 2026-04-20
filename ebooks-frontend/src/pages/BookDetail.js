@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {Container, Row, Col, Card, Button, Alert, Badge, Modal} from 'react-bootstrap';
+import {Container, Row, Col, Card, Button, Alert, Badge, Modal, Form} from 'react-bootstrap';
 import { bookService } from '../services/bookService';
 import { cartService } from '../services/cartService';
 import { stockAlertService } from '../services/stockAlertService';
+import librarianService from '../services/librarianService';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navbar';
 import LoanDurationSelector from "../components/LoanDurationSelector";
@@ -23,6 +24,12 @@ const BookDetail = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
   const [showStockAlertModal, setShowStockAlertModal] = useState(false);
+
+  // État pour le restockage (bibliothécaire / admin)
+  const isPrivileged = user && (user.role === 'librarian' || user.role === 'admin');
+  const [restockQty, setRestockQty] = useState(1);
+  const [restocking, setRestocking] = useState(false);
+  const [restockMessage, setRestockMessage] = useState(null);
 
   const loadBookDetails = useCallback(async () => {
     try {
@@ -94,6 +101,23 @@ const BookDetail = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la création de l\'alerte');
       console.error(err);
+    }
+  };
+
+  const handleRestock = async () => {
+    if (!book || restockQty < 1) return;
+    setRestocking(true);
+    setRestockMessage(null);
+    try {
+      const updatedBook = { ...book, quantity: book.quantity + restockQty };
+      await librarianService.updateBook(book.id, updatedBook);
+      setBook(updatedBook);
+      setRestockMessage({ type: 'success', text: `Stock mis à jour : +${restockQty} exemplaire(s). Nouveau stock : ${updatedBook.quantity}` });
+      setRestockQty(1);
+    } catch (err) {
+      setRestockMessage({ type: 'danger', text: err.response?.data?.message || 'Erreur lors du restockage' });
+    } finally {
+      setRestocking(false);
     }
   };
 
@@ -205,7 +229,7 @@ const BookDetail = () => {
                 </div>
               )}
 
-              {user && book.quantity > 0 && (
+              {user && book.quantity > 0 && !isPrivileged && (
                 <div className="loan-duration-section mt-4">
                   <h5>
                     <i className="bi bi-calendar-range me-2"></i>
@@ -219,31 +243,72 @@ const BookDetail = () => {
               )}
 
               <div className="book-actions mt-4">
-                {book.quantity > 0 ? (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="me-2"
-                    onClick={handleAddToCart}
-                    disabled={addingToCart}
-                  >
-                    <i className="bi bi-cart-plus me-2"></i>
-                    {addingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="secondary" size="lg" disabled className="me-2">
-                      <i className="bi bi-x-circle me-2"></i>Indisponible
-                    </Button>
+                {/* Actions CLIENT uniquement */}
+                {!isPrivileged && (
+                  book.quantity > 0 ? (
                     <Button
-                      variant="warning"
+                      variant="primary"
                       size="lg"
-                      onClick={handleStockAlert}
+                      className="me-2"
+                      onClick={handleAddToCart}
+                      disabled={addingToCart}
                     >
-                      <i className="bi bi-bell me-2"></i>
-                      M'alerter quand disponible
+                      <i className="bi bi-cart-plus me-2"></i>
+                      {addingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
                     </Button>
-                  </>
+                  ) : (
+                    <>
+                      <Button variant="secondary" size="lg" disabled className="me-2">
+                        <i className="bi bi-x-circle me-2"></i>Indisponible
+                      </Button>
+                      <Button variant="warning" size="lg" onClick={handleStockAlert}>
+                        <i className="bi bi-bell me-2"></i>
+                        M'alerter quand disponible
+                      </Button>
+                    </>
+                  )
+                )}
+
+                {/* Section RESTOCKAGE pour bibliothécaire / admin */}
+                {isPrivileged && (
+                  <Card className="border-success mt-2">
+                    <Card.Header className="bg-success text-white">
+                      <i className="bi bi-box-seam me-2"></i>Gestion du stock
+                    </Card.Header>
+                    <Card.Body>
+                      {restockMessage && (
+                        <Alert variant={restockMessage.type} className="mb-3" dismissible onClose={() => setRestockMessage(null)}>
+                          {restockMessage.text}
+                        </Alert>
+                      )}
+                      <p className="mb-2">
+                        Stock actuel : <strong>{book.quantity} exemplaire{book.quantity > 1 ? 's' : ''}</strong>
+                      </p>
+                      <Row className="align-items-end g-2">
+                        <Col xs="auto">
+                          <Form.Label className="mb-1">Quantité à ajouter</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min="1"
+                            max="999"
+                            value={restockQty}
+                            onChange={(e) => setRestockQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            style={{ width: '100px' }}
+                          />
+                        </Col>
+                        <Col xs="auto">
+                          <Button
+                            variant="success"
+                            onClick={handleRestock}
+                            disabled={restocking}
+                          >
+                            <i className="bi bi-plus-circle me-2"></i>
+                            {restocking ? 'En cours...' : 'Restocker'}
+                          </Button>
+                        </Col>
+                      </Row>
+                    </Card.Body>
+                  </Card>
                 )}
               </div>
             </div>

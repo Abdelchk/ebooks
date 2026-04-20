@@ -15,9 +15,12 @@ public class BookService implements IBookService {
 	@Autowired
 	private IBookRepository bookRepository;
 
+	@Autowired
+	private IStockAlertService stockAlertService;
+
 	@Override
-	public Book addOrUpdate(Book book) throws Exception {
-		
+	public Book addOrUpdate(Book book) {
+
 		if (book == null) {
 			throw new NullPointerException("Book ne doit pas être null");
 		}
@@ -41,7 +44,7 @@ public class BookService implements IBookService {
     }
 
     @Override
-	public List<Book> getBooks() throws Exception {;
+	public List<Book> getBooks() {
 		return bookRepository.findAll();
 	}
 
@@ -67,7 +70,7 @@ public class BookService implements IBookService {
 	}
 
 	@Override
-	public Book updateBook(Book book) throws Exception {
+	public Book updateBook(Book book) {
 	    if (book == null) {
 	        throw new NullPointerException("Book ne doit pas être null");
 	    }
@@ -94,11 +97,9 @@ public class BookService implements IBookService {
 
 	    // Notifier les utilisateurs si le livre est de nouveau en stock
 	    if (wasOutOfStock && nowInStock) {
-			IStockAlertService stockAlertService = new StockAlertService();
 	        try {
 	            stockAlertService.notifyUsersForBook(book.getId());
 	        } catch (Exception e) {
-	            // Log l'erreur mais ne pas faire échouer la mise à jour
 	            System.err.println("Erreur lors de la notification des alertes: " + e.getMessage());
 	        }
 	    }
@@ -108,8 +109,26 @@ public class BookService implements IBookService {
 
 
 	@Override
-	public void deleteBook(Long id) throws Exception {
+	public void deleteBook(Long id) {
 		bookRepository.deleteById(id);
+	}
+
+	@Override
+	public Book save(Book book) {
+		return bookRepository.save(book);
+	}
+
+	@Override
+	public void deleteById(Long id) {
+		bookRepository.deleteById(id);
+	}
+
+	@Override
+	public List<Book> findLowStockBooks() {
+		// Retourner les livres avec quantité <= 2
+		return bookRepository.findAll().stream()
+			.filter(book -> book.getQuantity() <= 2)
+			.toList();
 	}
 
 }

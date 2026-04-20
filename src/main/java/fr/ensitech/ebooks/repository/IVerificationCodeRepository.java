@@ -23,4 +23,9 @@ public interface IVerificationCodeRepository extends JpaRepository<VerificationC
     @Query("SELECT COUNT(v) FROM VerificationCode v WHERE v.userId = :user AND v.used = false AND v.expiryDate > :now")
     long countActiveCodesByUser(@Param("user") User user, @Param("now") LocalDateTime now);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM VerificationCode v WHERE v.userId.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
 }

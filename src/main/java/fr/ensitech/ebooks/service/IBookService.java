@@ -17,4 +17,9 @@ public interface IBookService {
 	List<Book> searchBooksByCategory(String category, String query) throws Exception;
 	Book updateBook(Book book) throws Exception;
 	void deleteBook(Long id) throws Exception;
+	
+	// Méthodes pour le bibliothécaire
+	Book save(Book book);
+	void deleteById(Long id);
+	List<Book> findLowStockBooks();
 }

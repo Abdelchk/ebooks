@@ -68,7 +68,15 @@ public class User {
 	
 	@Column(length = 10, columnDefinition = "varchar(10) default 'client'")
 	private String role;
-    
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
     @Column(nullable = false)
     private boolean enabled;
 

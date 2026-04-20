@@ -12,7 +12,8 @@ import java.util.Optional;
 @Service
 public interface IUserService {
 	User addOrUpdateUser(User user) throws Exception;
-    void deleteUser(Long id) throws Exception;
+    void deactivateAccount(Long userId) throws Exception; // Désactivation du compte (soft delete)
+    void deleteUser(Long userId) throws Exception; // Suppression complète (hard delete)
     Optional<User> findByEmail(String email);
 	String validateVerificationToken(String token) throws Exception;
     UserSecurityAnswer addSecurityAnswer(User user, Long questionId, String securityAnswer) throws Exception;
@@ -31,5 +32,11 @@ public interface IUserService {
     // Vérification de la question de sécurité
     SecurityQuestions getSecurityQuestionForUser(User user);
     boolean verifySecurityAnswer(User user, String answer);
+
+    // Méthodes pour l'administrateur
+    List<User> findAll();
+    User findById(Long id);
+    User save(User user);
+    User updateUser(User user) throws Exception;
 
 }

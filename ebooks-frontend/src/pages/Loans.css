@@ -42,19 +42,12 @@
   }
 }
 
-.status-ribbon {
-  position: absolute;
-  top: 10px;
-  right: -35px;
-  transform: rotate(45deg);
-  background-color: transparent;
-  padding: 5px 40px;
-  z-index: 10;
-}
-
-.status-ribbon .badge {
+.status-badge {
   font-size: 0.75rem;
   font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
 .loan-img {

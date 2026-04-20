@@ -1,6 +1,6 @@
 package fr.ensitech.ebooks.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,8 +19,8 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"password", "passwordHistory", "verificationToken", "resetPasswordToken", "resetTokenExpiryDate", "lastPasswordUpdateDate", "lastVerificationCodeSentAt", "hibernateLazyInitializer", "handler"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
@@ -38,7 +38,7 @@ public class Reservation {
     private Integer loanDuration; // Durée d'emprunt prévue en jours
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDING'")
     private ReservationStatus status;
     
     @Column
@@ -47,8 +47,15 @@ public class Reservation {
     @Column
     private LocalDateTime convertedToLoanAt;
     
+    @Column
+    private LocalDateTime validatedAt; // Date de validation par le bibliothécaire
+
+    @Column
+    private Long validatedBy; // ID du bibliothécaire qui a validé
+
     public enum ReservationStatus {
-        PENDING,      // En attente de retrait
+        PENDING,      // En attente de validation par le bibliothécaire
+        VALIDATED,    // Validée par le bibliothécaire, en attente de retrait
         CANCELLED,    // Annulée par l'utilisateur
         EXPIRED,      // Expirée (non retirée à temps)
         CONVERTED     // Convertie en emprunt

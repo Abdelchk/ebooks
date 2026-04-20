@@ -79,7 +79,10 @@ public class WebSecurityConfig {
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth
                     // Autoriser les endpoints publics de l'API REST
-                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()
+                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()                    // Endpoints pour les administrateurs
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    // Endpoints pour les bibliothécaires (et les admins)
+                    .requestMatchers("/api/librarian/**").hasAnyRole("LIBRARIAN", "ADMIN")
                     // Endpoints protégés nécessitant authentification
                     .requestMatchers("/api/rest/cart/**").authenticated()
                     .requestMatchers("/api/rest/reservations/**").authenticated()
