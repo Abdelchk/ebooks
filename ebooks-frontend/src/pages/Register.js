@@ -23,6 +23,8 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [recaptchaKey, setRecaptchaKey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptCGU, setAcceptCGU] = useState(false);
+  const [acceptRGPD, setAcceptRGPD] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -301,6 +303,57 @@ const Register = () => {
               </Form.Control.Feedback>
             </InputGroup>
           </Form.Group>
+
+          <hr className="my-4" />
+
+          {/* Section CGU et RGPD */}
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="checkbox"
+              id="acceptCGU"
+              checked={acceptCGU}
+              onChange={(e) => setAcceptCGU(e.target.checked)}
+              label={
+                <span>
+                  J'accepte les{' '}
+                  <a href="/CGU.pdf" target="_blank" rel="noopener noreferrer">
+                    Conditions Générales d'Utilisation
+                  </a>{' '}
+                  <span className="text-danger">*</span>
+                </span>
+              }
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="checkbox"
+              id="acceptRGPD"
+              checked={acceptRGPD}
+              onChange={(e) => setAcceptRGPD(e.target.checked)}
+              label={
+                <span>
+                  J'accepte la{' '}
+                  <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                    Politique de confidentialité
+                  </a>{' '}
+                  et le traitement de mes données personnelles conformément au RGPD{' '}
+                  <span className="text-danger">*</span>
+                </span>
+              }
+              required
+            />
+          </Form.Group>
+
+          <Alert variant="info" className="mt-3">
+            <i className="bi bi-info-circle"></i> <strong>Protection de vos données :</strong>
+            <ul className="mb-0 mt-2">
+              <li>Vos données sont traitées conformément au RGPD</li>
+              <li>Vous disposez d'un droit d'accès, de rectification et de suppression</li>
+              <li>Vos mots de passe sont chiffrés avec Argon2</li>
+            </ul>
+          </Alert>
 
           <Alert variant="secondary" className="mt-3">
             <i className="bi bi-shield-check"></i> Ce site est protégé par Google reCAPTCHA Enterprise. La vérification se fait automatiquement lors de la soumission.
