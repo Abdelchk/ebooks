@@ -9,6 +9,7 @@ import fr.ensitech.ebooks.utils.PasswordEncoderFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Configuration
+@Profile("!test")  // Ne pas exécuter en mode test (H2 CI)
 public class DataInitializer {
 
     @Bean

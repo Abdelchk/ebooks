@@ -8,6 +8,7 @@ import fr.ensitech.ebooks.repository.ISecurityQuestionsRepository;
 import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,6 +48,9 @@ public class UserServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private Validator validator;
+
     @InjectMocks
     private UserService userService;
 
@@ -54,6 +59,10 @@ public class UserServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Le validator retourne aucune violation par défaut (mot de passe valide)
+        // lenient() car certains tests n'atteignent pas l'appel à validator.validate()
+        lenient().when(validator.validate(any())).thenReturn(Collections.emptySet());
+
         user = User.builder()
                 .id(null)
                 .firstname("Jean")
