@@ -38,9 +38,6 @@ class LoanServiceTest {
     @Mock
     private IBookRepository bookRepository;
 
-    @Mock
-    private EmailService emailService;
-
     @InjectMocks
     private LoanService loanService;
 
@@ -125,7 +122,7 @@ class LoanServiceTest {
         assertThat(result.getUser()).isEqualTo(user);
         assertThat(result.getBook()).isEqualTo(book);
         assertThat(result.getStatus()).isEqualTo(Loan.LoanStatus.ACTIVE);
-        assertThat(result.getExtensionCount()).isEqualTo(0);
+        assertThat(result.getExtensionCount()).isZero();
         assertThat(result.getDueDate()).isAfter(LocalDateTime.now());
 
         verify(loanRepository).save(any(Loan.class));
