@@ -9,11 +9,14 @@ import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
 import fr.ensitech.ebooks.service.UserService;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests d'intégration pour UserService
@@ -34,6 +38,10 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 public class UserServiceIntegrationTest {
+
+    // Mock du serveur mail pour éviter les vraies connexions SMTP en CI
+    @MockBean
+    private JavaMailSender javaMailSender;
 
     @Autowired
     private IUserRepository userRepository;
@@ -56,6 +64,9 @@ public class UserServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Configurer le mock mail pour éviter les erreurs SMTP
+        when(javaMailSender.createMimeMessage()).thenReturn(mock(MimeMessage.class));
+
         // Créer ou récupérer une question de sécurité
         securityQuestion = new SecurityQuestions();
         securityQuestion.setQuestion("Quel est le nom de votre animal de compagnie ?");
@@ -302,7 +313,7 @@ public class UserServiceIntegrationTest {
         assertThat(foundUser).isEmpty();
     }
 
-    // ============ TESTS DE SUPPRESSION D'UTILISATEUR ============
+    // ============ TESTS DE DÉSACTIVATION D'UTILISATEUR ============
 
     @Test
     @DisplayName("Test d'intégration - Désactivation d'un utilisateur")
@@ -316,8 +327,8 @@ public class UserServiceIntegrationTest {
         // Activer l'utilisateur d'abord
         userService.validateVerificationToken(registeredUser.getVerificationToken());
 
-        // WHEN
-        userService.deleteUser(registeredUser.getId());
+        // WHEN — on utilise deactivateAccount (soft delete)
+        userService.deactivateAccount(registeredUser.getId());
 
         // THEN
         Optional<User> deactivatedUser = userRepository.findById(registeredUser.getId());
@@ -331,10 +342,10 @@ public class UserServiceIntegrationTest {
         // GIVEN
         Long nonExistentId = 999999L;
 
-        // WHEN / THEN
+        // WHEN / THEN — deleteUser (hard delete) lance Exception générique
         assertThatThrownBy(() -> userService.deleteUser(nonExistentId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Utilisateur introuvable avec l'ID " + nonExistentId);
+                .isInstanceOf(Exception.class)
+                .hasMessageContaining("Utilisateur non trouvé");
     }
 
     // ============ TESTS DE VÉRIFICATION DE LA RÉPONSE DE SÉCURITÉ ============

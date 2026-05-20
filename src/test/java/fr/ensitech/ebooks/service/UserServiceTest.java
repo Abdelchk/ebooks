@@ -217,10 +217,10 @@ public class UserServiceTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
-    // ============ TESTS DE SUPPRESSION D'UTILISATEUR ============
+    // ============ TESTS DE DÉSACTIVATION DE COMPTE ============
 
     @Test
-    void shouldDeleteUserSuccessfully() throws Exception {
+    void shouldDeactivateUserSuccessfully() throws Exception {
         // GIVEN
         user.setId(1L);
         user.setEnabled(true);
@@ -228,7 +228,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // WHEN
-        userService.deleteUser(1L);
+        userService.deactivateAccount(1L);
 
         // THEN
         assertThat(user.isEnabled()).isFalse();
@@ -238,14 +238,14 @@ public class UserServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenDeletingNonExistentUser() {
+    void shouldThrowExceptionWhenDeactivatingNonExistentUser() {
         // GIVEN
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         // WHEN / THEN
-        assertThatThrownBy(() -> userService.deleteUser(999L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Utilisateur introuvable avec l'ID 999");
+        assertThatThrownBy(() -> userService.deactivateAccount(999L))
+                .isInstanceOf(Exception.class)
+                .hasMessageContaining("Utilisateur non trouvé");
 
         verify(userRepository).findById(999L);
         verify(userRepository, never()).save(any(User.class));
