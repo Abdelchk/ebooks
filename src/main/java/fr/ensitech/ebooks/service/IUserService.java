@@ -11,12 +11,12 @@ import java.util.Optional;
 
 @Service
 public interface IUserService {
-	User addOrUpdateUser(User user) throws Exception;
-    void deactivateAccount(Long userId) throws Exception; // Désactivation du compte (soft delete)
-    void deleteUser(Long userId) throws Exception; // Suppression complète (hard delete)
+	User addOrUpdateUser(User user);
+    void deactivateAccount(Long userId);
+    void deleteUser(Long userId);
     Optional<User> findByEmail(String email);
-	String validateVerificationToken(String token) throws Exception;
-    UserSecurityAnswer addSecurityAnswer(User user, Long questionId, String securityAnswer) throws Exception;
+	String validateVerificationToken(String token);
+    UserSecurityAnswer addSecurityAnswer(User user, Long questionId, String securityAnswer);
     List<SecurityQuestions> getAllSecurityQuestions();
     String generateVerificationCode(User user);
     boolean validateVerificationCode(User user, String code);
@@ -37,6 +37,6 @@ public interface IUserService {
     List<User> findAll();
     User findById(Long id);
     User save(User user);
-    User updateUser(User user) throws Exception;
+    User updateUser(User user);
 
 }

@@ -3,44 +3,37 @@ package fr.ensitech.ebooks.service;
 import fr.ensitech.ebooks.email.*;
 import fr.ensitech.ebooks.entity.*;
 import fr.ensitech.ebooks.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 @Service
+@RequiredArgsConstructor
 public class ReservationService implements IReservationService {
 
-    @Autowired
-    private IReservationRepository reservationRepository;
+    private static final String RESERVATION_NOT_FOUND = "Réservation non trouvée";
 
-    @Autowired
-    private ICartItemRepository cartItemRepository;
-
-    @Autowired
-    private IBookRepository bookRepository;
-
-    @Autowired
-    private IUserRepository userRepository;
-
-    @Autowired
-    private ILoanRepository loanRepository;
-
-    @Autowired
-    private EmailService emailService;
+    private final IReservationRepository reservationRepository;
+    private final ICartItemRepository cartItemRepository;
+    private final IBookRepository bookRepository;
+    private final IUserRepository userRepository;
+    private final ILoanRepository loanRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional
-    public List<Reservation> createReservationsFromCart(Long userId) throws Exception {
+    public List<Reservation> createReservationsFromCart(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
 
         List<CartItem> cartItems = cartItemRepository.findByUserId(userId);
 
         if (cartItems.isEmpty()) {
-            throw new Exception("Le panier est vide");
+            throw new IllegalStateException("Le panier est vide");
         }
 
         List<Reservation> reservations = new ArrayList<>();
@@ -71,7 +64,7 @@ public class ReservationService implements IReservationService {
         }
 
         if (!unavailableBooks.isEmpty()) {
-            throw new Exception("Livres non disponibles : " + String.join(", ", unavailableBooks));
+            throw new IllegalStateException("Livres non disponibles : " + String.join(", ", unavailableBooks));
         }
 
         // Vider le panier
@@ -88,16 +81,16 @@ public class ReservationService implements IReservationService {
 
     @Override
     @Transactional
-    public Reservation cancelReservation(Long reservationId, Long userId) throws Exception {
+    public Reservation cancelReservation(Long reservationId, Long userId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException(RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new Exception("Non autorisé");
+            throw new IllegalArgumentException("Non autorisé");
         }
 
         if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
-            throw new Exception("Seules les réservations en attente peuvent être annulées");
+            throw new IllegalStateException("Seules les réservations en attente peuvent être annulées");
         }
 
         // Mettre à jour le statut
@@ -123,13 +116,13 @@ public class ReservationService implements IReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> getUserReservations(Long userId) throws Exception {
+    public List<Reservation> getUserReservations(Long userId) {
         return reservationRepository.findByUserId(userId);
     }
 
     @Override
     @Transactional
-    public void checkAndExpireReservations() throws Exception {
+    public void checkAndExpireReservations() {
         LocalDateTime now = LocalDateTime.now();
         List<Reservation> expiredReservations = reservationRepository
                 .findByStatusAndExpirationDateBefore(Reservation.ReservationStatus.PENDING, now);
@@ -157,13 +150,13 @@ public class ReservationService implements IReservationService {
 
     @Override
     @Transactional
-    public Reservation convertToLoan(Long reservationId) throws Exception {
+    public Reservation convertToLoan(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException(RESERVATION_NOT_FOUND));
 
         if (reservation.getStatus() != Reservation.ReservationStatus.VALIDATED &&
             reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
-            throw new Exception("Cette réservation ne peut pas être convertie");
+            throw new IllegalStateException("Cette réservation ne peut pas être convertie");
         }
 
         reservation.setStatus(Reservation.ReservationStatus.CONVERTED);
@@ -194,12 +187,12 @@ public class ReservationService implements IReservationService {
 
     @Override
     @Transactional
-    public Reservation validateReservation(Long reservationId, Long librarianId) throws Exception {
+    public Reservation validateReservation(Long reservationId, Long librarianId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException(RESERVATION_NOT_FOUND));
 
         if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
-            throw new Exception("Cette réservation ne peut pas être validée");
+            throw new IllegalStateException("Cette réservation ne peut pas être validée");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -239,13 +232,13 @@ public class ReservationService implements IReservationService {
 
     @Override
     @Transactional
-    public void cancelReservation(Long reservationId) throws Exception {
+    public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException(RESERVATION_NOT_FOUND));
 
         if (reservation.getStatus() == Reservation.ReservationStatus.CANCELLED ||
             reservation.getStatus() == Reservation.ReservationStatus.CONVERTED) {
-            throw new Exception("Cette réservation ne peut pas être annulée");
+            throw new IllegalStateException("Cette réservation ne peut pas être annulée");
         }
 
         reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
@@ -259,4 +252,3 @@ public class ReservationService implements IReservationService {
         reservationRepository.save(reservation);
     }
 }
-

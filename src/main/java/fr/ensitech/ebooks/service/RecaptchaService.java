@@ -90,9 +90,11 @@ public class RecaptchaService {
                 return false;
             }
 
-            logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}",
-                       recaptchaScore,
-                       response.getName().substring(response.getName().lastIndexOf("/") + 1));
+            if (logger.isInfoEnabled()) {
+                logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}",
+                           recaptchaScore,
+                           response.getName().substring(response.getName().lastIndexOf("/") + 1));
+            }
 
             return true;
 

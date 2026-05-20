@@ -3,29 +3,22 @@ package fr.ensitech.ebooks.service;
 import fr.ensitech.ebooks.email.*;
 import fr.ensitech.ebooks.entity.*;
 import fr.ensitech.ebooks.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class LoanService implements ILoanService {
 
-    @Autowired
-    private ILoanRepository loanRepository;
-
-    @Autowired
-    private IReservationRepository reservationRepository;
-
-    @Autowired
-    private IBookRepository bookRepository;
-
-    @Autowired
-    private EmailService emailService;
+    private final ILoanRepository loanRepository;
+    private final IReservationRepository reservationRepository;
+    private final IBookRepository bookRepository;
+    private final EmailService emailService;
 
     private static final int MAX_EXTENSIONS = 2;
     private static final int EXTENSION_DAYS = 7;
@@ -33,12 +26,12 @@ public class LoanService implements ILoanService {
 
     @Override
     @Transactional
-    public Loan createLoanFromReservation(Long reservationId) throws Exception {
+    public Loan createLoanFromReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new Exception("Réservation non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException("Réservation non trouvée"));
 
         if (reservation.getStatus() != Reservation.ReservationStatus.PENDING) {
-            throw new Exception("Cette réservation ne peut pas être convertie en emprunt");
+            throw new IllegalStateException("Cette réservation ne peut pas être convertie en emprunt");
         }
 
         // Créer l'emprunt
@@ -76,24 +69,24 @@ public class LoanService implements ILoanService {
 
     @Override
     @Transactional
-    public Loan extendLoan(Long loanId, Long userId) throws Exception {
+    public Loan extendLoan(Long loanId, Long userId) {
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new Exception("Emprunt non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException("Emprunt non trouvé"));
 
         if (!loan.getUser().getId().equals(userId)) {
-            throw new Exception("Non autorisé");
+            throw new IllegalArgumentException("Non autorisé");
         }
 
         if (loan.getStatus() == Loan.LoanStatus.RETURNED) {
-            throw new Exception("Cet emprunt est déjà terminé");
+            throw new IllegalStateException("Cet emprunt est déjà terminé");
         }
 
         if (loan.getExtensionCount() >= MAX_EXTENSIONS) {
-            throw new Exception("Nombre maximum de prolongations atteint (2)");
+            throw new IllegalStateException("Nombre maximum de prolongations atteint (2)");
         }
 
         if (loan.isOverdue()) {
-            throw new Exception("Impossible de prolonger un emprunt en retard");
+            throw new IllegalStateException("Impossible de prolonger un emprunt en retard");
         }
 
         // Prolonger
@@ -119,16 +112,16 @@ public class LoanService implements ILoanService {
 
     @Override
     @Transactional
-    public Loan returnLoan(Long loanId, Long userId) throws Exception {
+    public Loan returnLoan(Long loanId, Long userId) {
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new Exception("Emprunt non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException("Emprunt non trouvé"));
 
         if (!loan.getUser().getId().equals(userId)) {
-            throw new Exception("Non autorisé");
+            throw new IllegalArgumentException("Non autorisé");
         }
 
         if (loan.getStatus() == Loan.LoanStatus.RETURNED) {
-            throw new Exception("Ce livre a déjà été rendu");
+            throw new IllegalStateException("Ce livre a déjà été rendu");
         }
 
         boolean wasLate = loan.isOverdue();
@@ -159,22 +152,22 @@ public class LoanService implements ILoanService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Loan> getUserLoans(Long userId) throws Exception {
+    public List<Loan> getUserLoans(Long userId) {
         return loanRepository.findByUserId(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Loan> getActiveLoans(Long userId) throws Exception {
+    public List<Loan> getActiveLoans(Long userId) {
         return loanRepository.findByUserIdAndStatus(userId, Loan.LoanStatus.ACTIVE)
                 .stream()
                 .filter(loan -> loan.getReturnDate() == null)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
-    public void checkAndNotifyUpcomingDueDates() throws Exception {
+    public void checkAndNotifyUpcomingDueDates() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime in3Days = now.plusDays(3);
 
@@ -222,7 +215,7 @@ public class LoanService implements ILoanService {
 
     @Override
     @Transactional
-    public void checkAndNotifyOverdueLoans() throws Exception {
+    public void checkAndNotifyOverdueLoans() {
         LocalDateTime now = LocalDateTime.now();
         List<Loan> overdueLoans = loanRepository.findOverdueLoans(now);
 
@@ -245,4 +238,3 @@ public class LoanService implements ILoanService {
         }
     }
 }
-

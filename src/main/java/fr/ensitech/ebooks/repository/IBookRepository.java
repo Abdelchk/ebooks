@@ -15,18 +15,18 @@ import fr.ensitech.ebooks.entity.Book;
 @Repository
 public interface IBookRepository extends JpaRepository<Book, Long> {
 
-	List<Book> findByTitle(String title) throws Exception;
-	List<Book> findByIsPublished(boolean isPublished) throws Exception;
-	List<Book> findByTitleAndIsPublished(String title, boolean isPublished) throws Exception;
-	List<Book> findByTitleOrDescriptionContaining(String title, String description) throws Exception;
-	List<Book> findByIdGreaterThan(Long id) throws Exception;
-	List<Book> findByTitleContaining(String texte) throws Exception;
-	List<Book> findByPublicationDate(Date date) throws Exception;
-	List<Book> findByPublicationDateBetween(Date dateInf, Date dateSup) throws Exception;
-	List<Book> findByTitleOrderByPublicationDateDesc(String title) throws Exception;
-	List<Book> findByAuthorContainingIgnoreCase(String author) throws Exception;
-	List<Book> findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(String title, String author) throws Exception;
-	List<Book> findByCategory(String category) throws Exception;
+	List<Book> findByTitle(String title);
+	List<Book> findByIsPublished(boolean isPublished);
+	List<Book> findByTitleAndIsPublished(String title, boolean isPublished);
+	List<Book> findByTitleOrDescriptionContaining(String title, String description);
+	List<Book> findByIdGreaterThan(Long id);
+	List<Book> findByTitleContaining(String texte);
+	List<Book> findByPublicationDate(Date date);
+	List<Book> findByPublicationDateBetween(Date dateInf, Date dateSup);
+	List<Book> findByTitleOrderByPublicationDateDesc(String title);
+	List<Book> findByAuthorContainingIgnoreCase(String author);
+	List<Book> findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(String title, String author);
+	List<Book> findByCategory(String category);
 	List<Book> findByCategoryAndTitleContainingIgnoreCaseOrCategoryAndAuthorContainingIgnoreCase(
-			String category1, String title, String category2, String author) throws Exception;
+			String category1, String title, String category2, String author);
 }

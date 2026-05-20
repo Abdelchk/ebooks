@@ -8,16 +8,16 @@ import fr.ensitech.ebooks.entity.Book;
 
 @Service
 public interface IBookService {
-	Book addOrUpdate(Book book) throws Exception;
-    Book getBookById(Long id) throws Exception;
-	List<Book> getBooks() throws Exception;
-	List<Book> getBooksByTitleContaining(String texte) throws Exception;
-	List<Book> searchBooks(String query) throws Exception;
-	List<Book> getBooksByCategory(String category) throws Exception;
-	List<Book> searchBooksByCategory(String category, String query) throws Exception;
-	Book updateBook(Book book) throws Exception;
-	void deleteBook(Long id) throws Exception;
-	
+	Book addOrUpdate(Book book);
+    Book getBookById(Long id);
+	List<Book> getBooks();
+	List<Book> getBooksByTitleContaining(String texte);
+	List<Book> searchBooks(String query);
+	List<Book> getBooksByCategory(String category);
+	List<Book> searchBooksByCategory(String category, String query);
+	Book updateBook(Book book);
+	void deleteBook(Long id);
+
 	// Méthodes pour le bibliothécaire
 	Book save(Book book);
 	void deleteById(Long id);
