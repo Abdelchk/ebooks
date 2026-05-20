@@ -15,6 +15,7 @@ public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final JavaMailSender mailSender;
 
     public void sendEmail(String to, String subject, String htmlBody) {
