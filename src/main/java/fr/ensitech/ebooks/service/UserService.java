@@ -19,17 +19,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements IUserService {
+
+    private static final String USER_NOT_FOUND = "Utilisateur non trouvé";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final IUserRepository userRepository;
     private final ISecurityQuestionsRepository securityQuestionsRepository;
@@ -114,9 +117,9 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public void deactivateAccount(Long userId) throws Exception {
+    public void deactivateAccount(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
 
         // Désactiver le compte (soft delete)
         user.setEnabled(false);
@@ -130,9 +133,9 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public void deleteUser(Long userId) throws Exception {
+    public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
 
         String userEmail = user.getEmail();
         String userFirstname = user.getFirstname();
@@ -219,7 +222,7 @@ public class UserService implements IUserService {
             throw new IllegalStateException("Trop de codes actifs. Veuillez réessayer plus tard.");
         }
 
-        String code = String.format("%06d", new Random().nextInt(999999));
+        String code = String.format("%06d", SECURE_RANDOM.nextInt(999999));
 
         VerificationCode verificationCode = new VerificationCode();
         verificationCode.setUserId(user);
@@ -470,13 +473,13 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User updateUser(User user) throws Exception {
+    public User updateUser(User user) {
         if (user == null || user.getId() == null) {
             throw new IllegalArgumentException("Utilisateur invalide");
         }
 
         User existingUser = userRepository.findById(user.getId())
-            .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+            .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
 
         // Mettre à jour les champs modifiables
         if (user.getFirstname() != null) existingUser.setFirstname(user.getFirstname());

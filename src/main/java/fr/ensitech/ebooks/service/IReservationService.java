@@ -4,17 +4,16 @@ import fr.ensitech.ebooks.entity.Reservation;
 import java.util.List;
 
 public interface IReservationService {
-    List<Reservation> createReservationsFromCart(Long userId) throws Exception;
-    Reservation cancelReservation(Long reservationId, Long userId) throws Exception;
-    List<Reservation> getUserReservations(Long userId) throws Exception;
-    void checkAndExpireReservations() throws Exception;
-    Reservation convertToLoan(Long reservationId) throws Exception;
+    List<Reservation> createReservationsFromCart(Long userId);
+    Reservation cancelReservation(Long reservationId, Long userId);
+    List<Reservation> getUserReservations(Long userId);
+    void checkAndExpireReservations();
+    Reservation convertToLoan(Long reservationId);
 
     // Méthodes pour le bibliothécaire
     List<Reservation> findPendingReservations();
     List<Reservation> findByStatus(Reservation.ReservationStatus status);
     List<Reservation> findAll();
-    Reservation validateReservation(Long reservationId, Long librarianId) throws Exception;
-    void cancelReservation(Long reservationId) throws Exception;
+    Reservation validateReservation(Long reservationId, Long librarianId);
+    void cancelReservation(Long reservationId);
 }
-

@@ -1,16 +1,16 @@
 package fr.ensitech.ebooks.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import fr.ensitech.ebooks.entity.User;
 import fr.ensitech.ebooks.repository.IUserRepository;
 
 @Service
+@RequiredArgsConstructor
 public class VerificationTokenService {
 
-    @Autowired
-    private IUserRepository userRepository;
+    private final IUserRepository userRepository;
 
     public void createVerificationToken(User user, String token) {
         user.setVerificationToken(token);
