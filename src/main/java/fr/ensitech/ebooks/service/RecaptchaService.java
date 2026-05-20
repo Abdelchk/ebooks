@@ -64,7 +64,7 @@ public class RecaptchaService {
             if (!response.getTokenProperties().getValid()) {
                 logger.warn("Token reCAPTCHA invalide. Raison: {}",
                            response.getTokenProperties().getInvalidReason().name());
-                return true;
+                return false;
             }
 
             // Vérifier si l'action attendue correspond
@@ -72,7 +72,7 @@ public class RecaptchaService {
                 logger.warn("Action reCAPTCHA non conforme. Attendu: {}, Reçu: {}",
                            expectedAction,
                            response.getTokenProperties().getAction());
-                return true;
+                return false;
             }
 
             // Obtenir le score de risque
@@ -87,18 +87,18 @@ public class RecaptchaService {
             // Vérifier si le score est au-dessus du seuil
             if (recaptchaScore < scoreThreshold) {
                 logger.warn("Score reCAPTCHA trop bas: {} (seuil: {})", recaptchaScore, scoreThreshold);
-                return true;
+                return false;
             }
 
             logger.info("Validation reCAPTCHA réussie. Score: {}, Assessment: {}",
                        recaptchaScore,
                        response.getName().substring(response.getName().lastIndexOf("/") + 1));
 
-            return false;
+            return true;
 
         } catch (IOException e) {
             logger.error("Erreur lors de la validation reCAPTCHA", e);
-            return true;
+            return false;
         }
     }
 

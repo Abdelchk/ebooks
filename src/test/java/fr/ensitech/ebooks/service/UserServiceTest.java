@@ -2,14 +2,14 @@ package fr.ensitech.ebooks.service;
 
 import fr.ensitech.ebooks.entity.SecurityQuestions;
 import fr.ensitech.ebooks.entity.User;
-import fr.ensitech.ebooks.entity.UserSecurityAnswer;
-import fr.ensitech.ebooks.entity.VerificationCode;
 import fr.ensitech.ebooks.repository.ISecurityQuestionsRepository;
 import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
 import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,9 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -28,6 +26,7 @@ import static org.mockito.Mockito.*;
 /**
  * Tests unitaires pour la classe UserService
  */
+@Tag("unit")
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
 
@@ -46,6 +45,9 @@ public class UserServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private Validator validator;
+
     @InjectMocks
     private UserService userService;
 
@@ -54,6 +56,10 @@ public class UserServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Le validator retourne aucune violation par défaut (mot de passe valide)
+        // lenient() car certains tests n'atteignent pas l'appel à validator.validate()
+        lenient().when(validator.validate(any())).thenReturn(Collections.emptySet());
+
         user = User.builder()
                 .id(null)
                 .firstname("Jean")
@@ -217,10 +223,10 @@ public class UserServiceTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
-    // ============ TESTS DE SUPPRESSION D'UTILISATEUR ============
+    // ============ TESTS DE DÉSACTIVATION DE COMPTE ============
 
     @Test
-    void shouldDeleteUserSuccessfully() throws Exception {
+    void shouldDeactivateUserSuccessfully() throws Exception {
         // GIVEN
         user.setId(1L);
         user.setEnabled(true);
@@ -228,7 +234,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // WHEN
-        userService.deleteUser(1L);
+        userService.deactivateAccount(1L);
 
         // THEN
         assertThat(user.isEnabled()).isFalse();
@@ -238,14 +244,14 @@ public class UserServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenDeletingNonExistentUser() {
+    void shouldThrowExceptionWhenDeactivatingNonExistentUser() {
         // GIVEN
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         // WHEN / THEN
-        assertThatThrownBy(() -> userService.deleteUser(999L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Utilisateur introuvable avec l'ID 999");
+        assertThatThrownBy(() -> userService.deactivateAccount(999L))
+                .isInstanceOf(Exception.class)
+                .hasMessageContaining("Utilisateur non trouvé");
 
         verify(userRepository).findById(999L);
         verify(userRepository, never()).save(any(User.class));

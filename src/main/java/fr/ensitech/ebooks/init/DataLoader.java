@@ -7,10 +7,11 @@ import fr.ensitech.ebooks.utils.Dates;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
-import java.time.LocalDate;
 
 @Configuration
+@Profile("!test")  // Ne pas exécuter en mode test (H2 CI)
 public class DataLoader {
 
     @Bean
@@ -23,6 +24,7 @@ public class DataLoader {
                         .isPublished(true)
                         .publicationDate(Dates.convertStringToDate("23/01/2025"))
                         .author("Craig Walls")
+                        .category("Informatique")
                         .coverImageUrl("https://example.com/spring.jpg")
                         .quantity(10)
                         .build());
@@ -33,6 +35,7 @@ public class DataLoader {
                         .isPublished(true)
                         .publicationDate(Dates.convertStringToDate("15/05/2022"))
                         .author("John Smith")
+                        .category("Informatique")
                         .coverImageUrl("https://example.com/thymeleaf.jpg")
                         .quantity(5)
                         .build());
@@ -42,4 +45,3 @@ public class DataLoader {
         };
     }
 }
-

@@ -12,7 +12,9 @@ import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
 import fr.ensitech.ebooks.utils.PasswordEncoderFactory;
 import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,25 +24,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class UserService implements IUserService {
 
-    @Autowired
-    private IUserRepository userRepository;
-
-    @Autowired
-    private ISecurityQuestionsRepository securityQuestionsRepository;
-
-    @Autowired
-    private IUserSecurityAnswerRepository userSecurityAnswerRepository;
-
-    @Autowired
-    private IVerificationCodeRepository verificationCodeRepository;
-
-    @Autowired
-    private EmailService emailService;
+    private final IUserRepository userRepository;
+    private final ISecurityQuestionsRepository securityQuestionsRepository;
+    private final IUserSecurityAnswerRepository userSecurityAnswerRepository;
+    private final IVerificationCodeRepository verificationCodeRepository;
+    private final EmailService emailService;
+    private final Validator validator;
 
     private EmailContext emailContext;
 
@@ -85,6 +81,12 @@ public class UserService implements IUserService {
         // CAS 2 : Création (pas d'ID) - Vérifier si l'email existe déjà
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Un utilisateur avec l'email " + user.getEmail() + " existe déjà");
+        }
+
+        // Valider le mot de passe EN CLAIR avant de l'encoder (les contraintes @Pattern/@Length/@NotEmpty sont sur l'entité)
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+        if (!violations.isEmpty()) {
+            throw new jakarta.validation.ConstraintViolationException(violations);
         }
 
         // Créer un nouvel utilisateur

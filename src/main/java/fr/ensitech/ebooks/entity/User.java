@@ -1,6 +1,6 @@
 package fr.ensitech.ebooks.entity;
 
-import javax.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
@@ -21,7 +21,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "user")
+@Table(name = "users")
 @Getter @Setter @NoArgsConstructor @ToString @AllArgsConstructor
 @Builder
 public class User {
