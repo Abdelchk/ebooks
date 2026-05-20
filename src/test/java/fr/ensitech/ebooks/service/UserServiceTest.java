@@ -9,6 +9,7 @@ import fr.ensitech.ebooks.repository.IVerificationCodeRepository;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.*;
 /**
  * Tests unitaires pour la classe UserService
  */
+@Tag("unit")
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
 
