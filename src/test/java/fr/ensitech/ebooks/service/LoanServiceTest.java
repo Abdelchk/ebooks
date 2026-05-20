@@ -38,6 +38,9 @@ class LoanServiceTest {
     @Mock
     private IBookRepository bookRepository;
 
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private LoanService loanService;
 
