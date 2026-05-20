@@ -22,6 +22,16 @@ import java.util.stream.Collectors;
 @Profile("!test")  // Ne pas exécuter en mode test (H2 CI)
 public class DataInitializer {
 
+    /** Encapsule la configuration d'un utilisateur privilégié (évite > 7 paramètres). */
+    private record PrivilegedUserConfig(
+            String email,
+            String firstname,
+            String lastname,
+            String role,
+            String phone,
+            String rawPassword
+    ) {}
+
     @Bean
     CommandLineRunner initDatabase(ISecurityQuestionsRepository repository) {
         return args -> {
@@ -42,27 +52,11 @@ public class DataInitializer {
             String adminPassword = readEnvOrDefault("EBOOKS_ADMIN_PASSWORD", "Admin@2024!");
             String librarianPassword = readEnvOrDefault("EBOOKS_LIBRARIAN_PASSWORD", "Librarian@2024!");
 
-            upsertPrivilegedUser(
-                    userRepository,
-                    argon2,
-                    "admin@ebooks.fr",
-                    "Admin",
-                    "Systeme",
-                    "admin",
-                    "0600000001",
-                    adminPassword
-            );
+            upsertPrivilegedUser(userRepository, argon2,
+                    new PrivilegedUserConfig("admin@ebooks.fr", "Admin", "Systeme", "admin", "0600000001", adminPassword));
 
-            upsertPrivilegedUser(
-                    userRepository,
-                    argon2,
-                    "librarian@ebooks.fr",
-                    "Bibliothecaire",
-                    "Principal",
-                    "librarian",
-                    "0600000002",
-                    librarianPassword
-            );
+            upsertPrivilegedUser(userRepository, argon2,
+                    new PrivilegedUserConfig("librarian@ebooks.fr", "Bibliothecaire", "Principal", "librarian", "0600000002", librarianPassword));
         };
     }
 
@@ -77,32 +71,23 @@ public class DataInitializer {
         return (value == null || value.isBlank()) ? defaultValue : value;
     }
 
-    private void upsertPrivilegedUser(
-            IUserRepository userRepository,
-            PasswordEncoder argon2,
-            String email,
-            String firstname,
-            String lastname,
-            String role,
-            String phone,
-            String rawPassword
-    ) {
-        Optional<User> existing = userRepository.findByEmail(email);
+    private void upsertPrivilegedUser(IUserRepository userRepository, PasswordEncoder argon2, PrivilegedUserConfig config) {
+        Optional<User> existing = userRepository.findByEmail(config.email());
 
         if (existing.isPresent()) {
             User user = existing.get();
             boolean changed = false;
 
-            if (!role.equalsIgnoreCase(user.getRole())) {
-                user.setRole(role);
+            if (!config.role().equalsIgnoreCase(user.getRole())) {
+                user.setRole(config.role());
                 changed = true;
             }
             if (!user.isEnabled()) {
                 user.setEnabled(true);
                 changed = true;
             }
-            if (!argon2.matches(rawPassword, user.getPassword())) {
-                user.setPassword(argon2.encode(rawPassword));
+            if (!argon2.matches(config.rawPassword(), user.getPassword())) {
+                user.setPassword(argon2.encode(config.rawPassword()));
                 user.setLastPasswordUpdateDate(LocalDate.now());
                 changed = true;
             }
@@ -114,13 +99,13 @@ public class DataInitializer {
         }
 
         User user = User.builder()
-                .firstname(firstname)
-                .lastname(lastname)
-                .email(email)
-                .password(argon2.encode(rawPassword))
+                .firstname(config.firstname())
+                .lastname(config.lastname())
+                .email(config.email())
+                .password(argon2.encode(config.rawPassword()))
                 .birthdate(LocalDate.of(1990, 1, 1))
-                .phoneNumber(phone)
-                .role(role)
+                .phoneNumber(config.phone())
+                .role(config.role())
                 .enabled(true)
                 .verificationToken("VERIFIED")
                 .passwordHistory("")

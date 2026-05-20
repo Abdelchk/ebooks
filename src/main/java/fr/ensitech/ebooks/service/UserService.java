@@ -14,7 +14,7 @@ import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,25 +28,15 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class UserService implements IUserService {
 
-    @Autowired
-    private IUserRepository userRepository;
-
-    @Autowired
-    private ISecurityQuestionsRepository securityQuestionsRepository;
-
-    @Autowired
-    private IUserSecurityAnswerRepository userSecurityAnswerRepository;
-
-    @Autowired
-    private IVerificationCodeRepository verificationCodeRepository;
-
-    @Autowired
-    private EmailService emailService;
-
-    @Autowired
-    private Validator validator;
+    private final IUserRepository userRepository;
+    private final ISecurityQuestionsRepository securityQuestionsRepository;
+    private final IUserSecurityAnswerRepository userSecurityAnswerRepository;
+    private final IVerificationCodeRepository verificationCodeRepository;
+    private final EmailService emailService;
+    private final Validator validator;
 
     private EmailContext emailContext;
 

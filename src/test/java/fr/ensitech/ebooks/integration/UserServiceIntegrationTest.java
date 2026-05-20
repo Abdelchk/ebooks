@@ -15,9 +15,9 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.*;
 public class UserServiceIntegrationTest {
 
     // Mock du serveur mail pour éviter les vraies connexions SMTP en CI
-    @MockBean
+    @MockitoBean
     private JavaMailSender javaMailSender;
 
     @Autowired

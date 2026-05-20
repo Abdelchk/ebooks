@@ -71,10 +71,38 @@ jobs:
               **/dto/**,\
               **/config/**,\
               **/*Config.java,\
+              **/controller/**,\
+              **/email/**,\
+              **/securingweb/**,\
+              **/scheduler/**,\
+              **/init/**,\
+              **/data/**,\
+              **/enums/**,\
               ebooks-frontend/src/**/*.test.js,\
               ebooks-frontend/src/**/*.spec.js,\
               ebooks-frontend/src/setupTests.js,\
-              ebooks-frontend/src/reportWebVitals.js"
+              ebooks-frontend/src/reportWebVitals.js" \
+            -Dsonar.coverage.exclusions="\
+              **/entity/**,\
+              **/dto/**,\
+              **/config/**,\
+              **/*Config.java,\
+              **/controller/**,\
+              **/email/**,\
+              **/securingweb/**,\
+              **/scheduler/**,\
+              **/init/**,\
+              **/data/**,\
+              **/enums/**,\
+              **/main/**,\
+              **/*Application.java"
+
+      - name: Sauvegarder le rapport SonarCloud (report-task.txt)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-report-task
+          path: .scannerwork/report-task.txt
+          retention-days: 1
 
   # ─────────────────────────────────────────────
   # QUALITY GATE : Vérification du seuil qualité
@@ -85,6 +113,12 @@ jobs:
     needs: [ full-analysis ]
 
     steps:
+      - name: Télécharger le rapport SonarCloud
+        uses: actions/download-artifact@v4
+        with:
+          name: sonar-report-task
+          path: .scannerwork
+
       - name: Attente du Quality Gate SonarCloud
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5

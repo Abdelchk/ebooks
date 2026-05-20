@@ -2,8 +2,6 @@ package fr.ensitech.ebooks.service;
 
 import fr.ensitech.ebooks.entity.SecurityQuestions;
 import fr.ensitech.ebooks.entity.User;
-import fr.ensitech.ebooks.entity.UserSecurityAnswer;
-import fr.ensitech.ebooks.entity.VerificationCode;
 import fr.ensitech.ebooks.repository.ISecurityQuestionsRepository;
 import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.repository.IUserSecurityAnswerRepository;
@@ -18,10 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;

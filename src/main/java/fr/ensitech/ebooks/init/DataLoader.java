@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import java.time.LocalDate;
 
 @Configuration
 @Profile("!test")  // Ne pas exécuter en mode test (H2 CI)
