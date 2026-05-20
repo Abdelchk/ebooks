@@ -77,7 +77,7 @@ jobs:
 
       - name: Vérification ESLint (React)
         working-directory: ebooks-frontend
-        run: npm run build -- --max-warnings 0
+        run: npm run lint
         continue-on-error: true
 
       - name: Build + Tests + Analyse SonarCloud (Java + React)

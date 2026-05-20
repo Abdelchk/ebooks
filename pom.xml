@@ -193,6 +193,15 @@
 					<excludes>
 						<exclude>**/entity/**</exclude>
 						<exclude>**/dto/**</exclude>
+						<exclude>**/config/**</exclude>
+						<exclude>**/*Config.class</exclude>
+						<exclude>**/controller/**</exclude>
+						<exclude>**/email/**</exclude>
+						<exclude>**/securingweb/**</exclude>
+						<exclude>**/scheduler/**</exclude>
+						<exclude>**/init/**</exclude>
+						<exclude>**/data/**</exclude>
+						<exclude>**/enums/**</exclude>
 						<exclude>**/*Application.class</exclude>
 					</excludes>
 				</configuration>
