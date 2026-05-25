@@ -12,6 +12,7 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
@@ -31,6 +32,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class WebSecurityConfig {
 
     @Autowired
@@ -87,7 +89,8 @@ public class WebSecurityConfig {
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth
                     // Autoriser les endpoints publics de l'API REST
-                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()                    // Endpoints pour les administrateurs
+                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()                    .requestMatchers("/api/rest/images/**").hasAnyRole("LIBRARIAN", "ADMIN")
+                    // Endpoints pour les administrateurs
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     // Endpoints pour les bibliothécaires (et les admins)
                     .requestMatchers("/api/librarian/**").hasAnyRole("LIBRARIAN", "ADMIN")
