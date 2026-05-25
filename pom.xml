@@ -141,13 +141,6 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
-
-		<!-- Cloudinary : stockage d'images dans le cloud -->
-		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-http44</artifactId>
-			<version>1.39.0</version>
-		</dependency>
 	</dependencies>
 
 	<dependencyManagement>

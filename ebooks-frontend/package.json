@@ -52,7 +52,6 @@
       "!src/components/PasswordInput.js",
       "!src/components/PasswordStrengthIndicator.js",
       "!src/components/PasswordWarningBanner.js",
-      "!src/components/BookCoverUpload.js",
       "!src/context/AuthContext.js",
       "!src/services/api.js",
       "!src/hooks/**",
