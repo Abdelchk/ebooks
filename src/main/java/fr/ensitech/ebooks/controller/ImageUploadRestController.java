@@ -16,7 +16,8 @@ import java.util.Set;
 @RequestMapping("/api/rest/images")
 public class ImageUploadRestController {
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
+    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5 Mo
+    private static final String ERROR_KEY = "error";
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif"
     );
@@ -30,12 +31,10 @@ public class ImageUploadRestController {
     /**
      * Upload d'une image de couverture de livre vers Cloudinary.
      * Accessible uniquement aux LIBRARIAN et ADMIN.
+     * POST /api/rest/images/upload (multipart/form-data)
      *
-     * POST /api/rest/images/upload
-     * Content-Type: multipart/form-data
-     * Body: file (image)
-     *
-     * @return { "url": "https://res.cloudinary.com/..." }
+     * @param file Le fichier image à uploader
+     * @return La réponse contenant l'URL de l'image uploadée
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
@@ -44,18 +43,18 @@ public class ImageUploadRestController {
 
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Le fichier est vide ou manquant."));
+                    .body(Map.of(ERROR_KEY, "Le fichier est vide ou manquant."));
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Le fichier dépasse la taille maximale autorisée (5 Mo)."));
+                    .body(Map.of(ERROR_KEY, "Le fichier dépasse la taille maximale autorisée (5 Mo)."));
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Type de fichier non autorisé. Formats acceptés : JPEG, PNG, WebP, GIF."));
+                    .body(Map.of(ERROR_KEY, "Type de fichier non autorisé. Formats acceptés : JPEG, PNG, WebP, GIF."));
         }
 
         try {
@@ -63,15 +62,17 @@ public class ImageUploadRestController {
             return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur lors de l'upload de l'image : " + e.getMessage()));
+                    .body(Map.of(ERROR_KEY, "Erreur lors de l'upload de l'image : " + e.getMessage()));
         }
     }
 
     /**
      * Suppression d'une image de couverture depuis Cloudinary.
      * Accessible uniquement aux LIBRARIAN et ADMIN.
+     * DELETE /api/rest/images/delete?url={imageUrl}
      *
-     * DELETE /api/rest/images/delete?url=https://res.cloudinary.com/...
+     * @param imageUrl L'URL Cloudinary de l'image à supprimer
+     * @return Un message de confirmation
      */
     @DeleteMapping("/delete")
     @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
@@ -80,7 +81,7 @@ public class ImageUploadRestController {
 
         if (imageUrl == null || imageUrl.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "L'URL de l'image est requise."));
+                    .body(Map.of(ERROR_KEY, "L'URL de l'image est requise."));
         }
 
         try {
@@ -88,8 +89,12 @@ public class ImageUploadRestController {
             return ResponseEntity.ok(Map.of("message", "Image supprimée avec succès."));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur lors de la suppression : " + e.getMessage()));
+                    .body(Map.of(ERROR_KEY, "Erreur lors de la suppression : " + e.getMessage()));
         }
     }
 }
+
+
+
+
 

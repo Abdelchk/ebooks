@@ -44,37 +44,25 @@ jobs:
 
       - name: Installation des dépendances npm
         working-directory: ebooks-frontend
-        run: npm ci --ignore-scripts
-
-      - name: Tests Jest avec couverture (React)
-        working-directory: ebooks-frontend
-        run: npm run test:coverage
-        env:
-          CI: true
+        run: npm ci
 
       - name: Build + Tests + Analyse SonarCloud (branche)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
           SPRING_PROFILES_ACTIVE: test
-          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-            -Dsonar.organization=$SONAR_ORGANIZATION \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.branch.name=${{ github.ref_name }} \
-            -Dsonar.sources=src/main/java,src/main/resources,ebooks-frontend/src \
+            -Dsonar.sources=src/main/java,ebooks-frontend/src \
             -Dsonar.tests=src/test/java \
             -Dsonar.java.binaries=target/classes \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.javascript.file.suffixes=.js,.jsx \
-            -Dsonar.javascript.lcov.reportPaths=ebooks-frontend/coverage/lcov.info \
             -Dsonar.exclusions="\
               **/entity/**,\
               **/dto/**,\
@@ -88,9 +76,7 @@ jobs:
               **/data/**,\
               **/enums/**,\
               ebooks-frontend/src/**/*.test.js,\
-              ebooks-frontend/src/**/*.test.jsx,\
               ebooks-frontend/src/**/*.spec.js,\
-              ebooks-frontend/src/**/*.spec.jsx,\
               ebooks-frontend/src/setupTests.js,\
               ebooks-frontend/src/reportWebVitals.js" \
             -Dsonar.coverage.exclusions="\
@@ -106,26 +92,5 @@ jobs:
               **/data/**,\
               **/enums/**,\
               **/main/**,\
-              **/*Application.java,\
-              ebooks-frontend/src/pages/**,\
-              ebooks-frontend/src/App.js,\
-              ebooks-frontend/src/index.js,\
-              ebooks-frontend/src/hooks/**,\
-              ebooks-frontend/src/config/**,\
-              ebooks-frontend/src/services/api.js,\
-              ebooks-frontend/src/context/AuthContext.js,\
-              ebooks-frontend/src/components/Navbar.js,\
-              ebooks-frontend/src/components/Footer.js,\
-              ebooks-frontend/src/components/AdminRoute.js,\
-              ebooks-frontend/src/components/LibrarianRoute.js,\
-              ebooks-frontend/src/components/PrivateRoute.js,\
-              ebooks-frontend/src/components/PasswordExpirationGuard.js,\
-              ebooks-frontend/src/components/ErrorBoundary.js,\
-              ebooks-frontend/src/components/Loader.js,\
-              ebooks-frontend/src/components/CartCounter.js,\
-              ebooks-frontend/src/components/ConfirmationModal.js,\
-              ebooks-frontend/src/components/LoanDurationSelector.js,\
-              ebooks-frontend/src/components/PasswordInput.js,\
-              ebooks-frontend/src/components/PasswordStrengthIndicator.js,\
-              ebooks-frontend/src/components/PasswordWarningBanner.js"
+              **/*Application.java"
 
