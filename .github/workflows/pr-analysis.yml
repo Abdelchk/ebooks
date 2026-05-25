@@ -151,4 +151,25 @@ jobs:
               **/data/**,\
               **/enums/**,\
               **/main/**,\
-              **/*Application.java"
+              **/*Application.java,\
+              ebooks-frontend/src/pages/**,\
+              ebooks-frontend/src/App.js,\
+              ebooks-frontend/src/index.js,\
+              ebooks-frontend/src/hooks/**,\
+              ebooks-frontend/src/config/**,\
+              ebooks-frontend/src/services/api.js,\
+              ebooks-frontend/src/context/AuthContext.js,\
+              ebooks-frontend/src/components/Navbar.js,\
+              ebooks-frontend/src/components/Footer.js,\
+              ebooks-frontend/src/components/AdminRoute.js,\
+              ebooks-frontend/src/components/LibrarianRoute.js,\
+              ebooks-frontend/src/components/PrivateRoute.js,\
+              ebooks-frontend/src/components/PasswordExpirationGuard.js,\
+              ebooks-frontend/src/components/ErrorBoundary.js,\
+              ebooks-frontend/src/components/Loader.js,\
+              ebooks-frontend/src/components/CartCounter.js,\
+              ebooks-frontend/src/components/ConfirmationModal.js,\
+              ebooks-frontend/src/components/LoanDurationSelector.js,\
+              ebooks-frontend/src/components/PasswordInput.js,\
+              ebooks-frontend/src/components/PasswordStrengthIndicator.js,\
+              ebooks-frontend/src/components/PasswordWarningBanner.js"
