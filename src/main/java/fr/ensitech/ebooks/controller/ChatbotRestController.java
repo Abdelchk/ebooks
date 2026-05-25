@@ -4,11 +4,13 @@ import fr.ensitech.ebooks.dto.ChatRequest;
 import fr.ensitech.ebooks.dto.ChatResponse;
 import fr.ensitech.ebooks.service.ChatbotService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/rest/chat")
+@Profile("!test")
 @RequiredArgsConstructor
 public class ChatbotRestController {
 
