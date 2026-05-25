@@ -63,13 +63,7 @@ public class ChatbotService {
         String bookContext = foundBooks.isEmpty()
                 ? "Aucun livre trouvé dans le catalogue pour cette recherche."
                 : foundBooks.stream()
-                  .map(b -> "- '%s' de %s (catégorie: %s, disponible: %s)"
-                            .formatted(
-                                    b.getTitle(),
-                                    b.getAuthor(),
-                                    b.getCategory(),
-                                    b.getQuantity() > 0 ? "oui (" + b.getQuantity() + " exemplaires)" : "non (stock épuisé)"
-                            ))
+                  .map(this::formatBookEntry)
                   .collect(java.util.stream.Collectors.joining("\n"));
 
         // ── 3. Prompt système : donne le rôle + le contexte BDD au LLM ──────
@@ -109,5 +103,14 @@ public class ChatbotService {
                 .toList();
 
         return new ChatResponse(reply, bookDtos);
+    }
+
+    // Méthode extraite pour éviter le ternaire imbriqué dans le stream
+    private String formatBookEntry(Book b) {
+        String disponibilite = b.getQuantity() > 0
+                ? "oui (" + b.getQuantity() + " exemplaires)"
+                : "non (stock épuisé)";
+        return "- '%s' de %s (catégorie: %s, disponible: %s)"
+                .formatted(b.getTitle(), b.getAuthor(), b.getCategory(), disponibilite);
     }
 }

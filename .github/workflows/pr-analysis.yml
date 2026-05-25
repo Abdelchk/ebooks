@@ -22,6 +22,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Configuration Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ebooks-frontend/package-lock.json
+
       - name: Cache Maven
         uses: actions/cache@v4
         with:
@@ -30,8 +37,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Exécution des tests unitaires (@Tag("unit"))
+      - name: Tests unitaires Java (@Tag("unit"))
         run: mvn test -Dgroups=unit -DfailIfNoTests=false
+
+      - name: Installation des dépendances npm
+        working-directory: ebooks-frontend
+        run: npm ci --ignore-scripts
+
+      - name: Tests unitaires React (Jest)
+        working-directory: ebooks-frontend
+        run: npm test -- --watchAll=false --passWithNoTests
+        env:
+          CI: true
 
   # ─────────────────────────────────────────────
   # ANALYSE COMPLÈTE : Backend + Frontend
@@ -73,29 +90,38 @@ jobs:
 
       - name: Installation des dépendances npm
         working-directory: ebooks-frontend
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Vérification ESLint (React)
         working-directory: ebooks-frontend
         run: npm run lint
         continue-on-error: true
 
+      - name: Tests Jest avec couverture (React)
+        working-directory: ebooks-frontend
+        run: npm run test:coverage
+        env:
+          CI: true
+
       - name: Build + Tests + Analyse SonarCloud (Java + React)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
           SPRING_PROFILES_ACTIVE: test
         run: |
           mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+            -Dsonar.organization=$SONAR_ORGANIZATION \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.sources=src/main/java,ebooks-frontend/src \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.sources=src/main/java,src/main/resources,ebooks-frontend/src \
             -Dsonar.tests=src/test/java \
             -Dsonar.java.binaries=target/classes \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.javascript.file.suffixes=.js,.jsx \
+            -Dsonar.javascript.lcov.reportPaths=ebooks-frontend/coverage/lcov.info \
             -Dsonar.exclusions="\
               **/entity/**,\
               **/dto/**,\
@@ -126,4 +152,3 @@ jobs:
               **/enums/**,\
               **/main/**,\
               **/*Application.java"
-

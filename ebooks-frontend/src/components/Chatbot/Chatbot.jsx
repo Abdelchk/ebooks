@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { chatService } from '../../services/chatService';
 import { cartService } from '../../services/cartService';
 import { useAuth } from '../../context/AuthContext';
@@ -6,29 +7,58 @@ import { useCart } from '../../context/CartContext';
 import './Chatbot.css';
 
 const STORAGE_KEY = 'chatbot_history';
+const MAX_HISTORY_SIZE = 100; // Limite la taille pour éviter localStorage overflow
 
 const INITIAL_MESSAGE = {
+    id: 'initial',
     role: 'bot',
     text: '👋 Bonjour ! Je suis votre assistant bibliothèque.\nPosez-moi une question ou cherchez un livre par titre ou auteur !',
 };
 
+// Sanitize un message avant stockage (supprime les propriétés non attendues)
+const sanitizeMessage = (msg) => ({
+    id: msg.id,
+    role: msg.role === 'user' || msg.role === 'bot' ? msg.role : 'bot',
+    text: typeof msg.text === 'string' ? msg.text.slice(0, 2000) : '',
+    books: Array.isArray(msg.books) ? msg.books.map(b => ({
+        id: Number(b.id),
+        title: String(b.title || '').slice(0, 200),
+        author: String(b.author || '').slice(0, 100),
+        quantity: Number(b.quantity) || 0,
+        addedToCart: Boolean(b.addedToCart),
+    })) : undefined,
+});
+
 const loadHistory = () => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : [INITIAL_MESSAGE];
-    } catch {
+        if (!saved) return [INITIAL_MESSAGE];
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return [INITIAL_MESSAGE];
+        return parsed.map(sanitizeMessage).slice(-MAX_HISTORY_SIZE);
+    } catch (e) {
+        // localStorage indisponible ou JSON invalide
+        console.warn('Impossible de charger l\'historique du chat:', e.message);
         return [INITIAL_MESSAGE];
     }
 };
+
+// Extrait : met à jour addedToCart pour un livre donné dans les messages
+const markBookAsAdded = (messages, bookId) =>
+    messages.map(msg => {
+        if (!msg.books?.some(b => b.id === bookId)) return msg;
+        return { ...msg, books: msg.books.map(b => b.id === bookId ? { ...b, addedToCart: true } : b) };
+    });
 
 const Chatbot = () => {
     const { user } = useAuth();
     const { refreshCartCount } = useCart();
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState(loadHistory);  // ← chargé depuis localStorage
+    const [messages, setMessages] = useState(loadHistory);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [addingBook, setAddingBook] = useState(null);
+    const [cartError, setCartError] = useState(null);
     const messagesEndRef = useRef(null);
 
     // Scroll automatique vers le bas à chaque nouveau message
@@ -36,19 +66,20 @@ const Chatbot = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
 
-    // Sauvegarde automatique dans localStorage à chaque changement de messages
+    // Sauvegarde automatique dans localStorage (sanitized)
     useEffect(() => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-        } catch {
-            // localStorage plein ou désactivé → on ignore silencieusement
+            const sanitized = messages.map(sanitizeMessage).slice(-MAX_HISTORY_SIZE);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+        } catch (e) {
+            // localStorage plein ou désactivé
+            console.warn('Impossible de sauvegarder l\'historique du chat:', e.message);
         }
     }, [messages]);
 
     // Effacer l'historique
     const handleClearHistory = () => {
-        const fresh = [INITIAL_MESSAGE];
-        setMessages(fresh);
+        setMessages([INITIAL_MESSAGE]);
         localStorage.removeItem(STORAGE_KEY);
     };
 
@@ -59,20 +90,24 @@ const Chatbot = () => {
         const trimmed = input.trim();
         if (!trimmed || loading) return;
 
-        // Ajouter le message utilisateur
-        setMessages(prev => [...prev, { role: 'user', text: trimmed }]);
+        const userMsg = { id: `user-${Date.now()}`, role: 'user', text: trimmed };
+        setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
 
         try {
             const data = await chatService.sendMessage(trimmed);
-            setMessages(prev => [...prev, {
+            const botMsg = {
+                id: `bot-${Date.now()}`,
                 role: 'bot',
                 text: data.reply,
                 books: data.books || []
-            }]);
+            };
+            setMessages(prev => [...prev, botMsg]);
         } catch (err) {
+            console.error('Erreur chatbot:', err.message);
             setMessages(prev => [...prev, {
+                id: `err-${Date.now()}`,
                 role: 'bot',
                 text: '❌ Une erreur est survenue. Veuillez réessayer.'
             }]);
@@ -85,20 +120,12 @@ const Chatbot = () => {
         setAddingBook(book.id);
         try {
             await cartService.addToCart(book.id, 14);
-            await refreshCartCount(); // ← met à jour le badge panier dans la navbar
-            // Remplacer le bouton par un message de confirmation
-            setMessages(prev => prev.map(msg =>
-                msg.books?.some(b => b.id === book.id)
-                    ? {
-                        ...msg,
-                        books: msg.books.map(b =>
-                            b.id === book.id ? { ...b, addedToCart: true } : b
-                        )
-                    }
-                    : msg
-            ));
+            await refreshCartCount();
+            setMessages(prev => markBookAsAdded(prev, book.id));
         } catch (err) {
-            alert('Impossible d\'ajouter au panier. Vérifiez votre connexion.');
+            console.error('Erreur ajout panier:', err.message);
+            setCartError('Impossible d\'ajouter au panier. Vérifiez votre connexion.');
+            setTimeout(() => setCartError(null), 4000);
         } finally {
             setAddingBook(null);
         }
@@ -116,10 +143,13 @@ const Chatbot = () => {
                 {isOpen ? '✕' : '💬'}
             </button>
 
-            {/* ── Fenêtre de chat ── */}
+            {/* ── Fenêtre de chat : <dialog> pour l'accessibilité ── */}
             {isOpen && (
-                <div className="chatbot-window" role="dialog" aria-label="Assistant bibliothèque">
-
+                <dialog
+                    className="chatbot-window"
+                    aria-label="Assistant bibliothèque"
+                    open
+                >
                     {/* Header */}
                     <div className="chatbot-header">
                         <span>🤖 Assistant Bibliothèque</span>
@@ -138,39 +168,18 @@ const Chatbot = () => {
 
                     {/* Messages */}
                     <div className="chatbot-messages">
-                        {messages.map((msg, i) => (
-                            <div key={i} className={`message ${msg.role}`}>
+                        {messages.map(msg => (
+                            <div key={msg.id} className={`message ${msg.role}`}>
                                 <div className="message-bubble">{msg.text}</div>
 
                                 {/* Cartes livres avec bouton panier */}
                                 {msg.books?.map(book => (
-                                    <div key={book.id} className="chatbot-book-card">
-                                        <div className="chatbot-book-info">
-                                            <div className="chatbot-book-title" title={book.title}>
-                                                {book.title}
-                                            </div>
-                                            <div className="chatbot-book-author">{book.author}</div>
-                                        </div>
-
-                                        <span className={`chatbot-book-badge ${book.quantity > 0 ? 'available' : 'unavailable'}`}>
-                                            {book.quantity > 0 ? `✅ ${book.quantity} dispo` : '❌ Épuisé'}
-                                        </span>
-
-                                        {book.quantity > 0 && (
-                                            book.addedToCart
-                                                ? <span style={{ color: '#166534', fontSize: 13 }}>✅ Ajouté !</span>
-                                                : (
-                                                    <button
-                                                        className="chatbot-add-btn"
-                                                        onClick={() => handleAddToCart(book)}
-                                                        disabled={addingBook === book.id}
-                                                        aria-label={`Ajouter ${book.title} au panier`}
-                                                    >
-                                                        {addingBook === book.id ? '...' : '🛒'}
-                                                    </button>
-                                                )
-                                        )}
-                                    </div>
+                                    <BookCard
+                                        key={book.id}
+                                        book={book}
+                                        addingBook={addingBook}
+                                        onAddToCart={handleAddToCart}
+                                    />
                                 ))}
                             </div>
                         ))}
@@ -186,6 +195,13 @@ const Chatbot = () => {
 
                         <div ref={messagesEndRef} />
                     </div>
+
+                    {/* Erreur panier */}
+                    {cartError && (
+                        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 10px', fontSize: 13, margin: '4px 8px', borderRadius: 6 }}>
+                            {cartError}
+                        </div>
+                    )}
 
                     {/* Saisie */}
                     <div className="chatbot-input">
@@ -207,11 +223,54 @@ const Chatbot = () => {
                             ➤
                         </button>
                     </div>
-                </div>
+                </dialog>
             )}
         </>
     );
 };
 
-export default Chatbot;
+// ── Sous-composant BookCard (réduit la profondeur d'imbrication) ──────────────
+const BookCard = ({ book, addingBook, onAddToCart }) => {
+    const isAdding = addingBook === book.id;
+    const isAvailable = book.quantity > 0;
 
+    return (
+        <div className="chatbot-book-card">
+            <div className="chatbot-book-info">
+                <div className="chatbot-book-title" title={book.title}>{book.title}</div>
+                <div className="chatbot-book-author">{book.author}</div>
+            </div>
+            <span className={`chatbot-book-badge ${isAvailable ? 'available' : 'unavailable'}`}>
+                {isAvailable ? `✅ ${book.quantity} dispo` : '❌ Épuisé'}
+            </span>
+            {isAvailable && (
+                book.addedToCart
+                    ? <span style={{ color: '#166534', fontSize: 13 }}>✅ Ajouté !</span>
+                    : (
+                        <button
+                            className="chatbot-add-btn"
+                            onClick={() => onAddToCart(book)}
+                            disabled={isAdding}
+                            aria-label={`Ajouter ${book.title} au panier`}
+                        >
+                            {isAdding ? '...' : '🛒'}
+                        </button>
+                    )
+            )}
+        </div>
+    );
+};
+
+BookCard.propTypes = {
+    book: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        title: PropTypes.string.isRequired,
+        author: PropTypes.string.isRequired,
+        quantity: PropTypes.number.isRequired,
+        addedToCart: PropTypes.bool,
+    }).isRequired,
+    addingBook: PropTypes.number,
+    onAddToCart: PropTypes.func.isRequired,
+};
+
+export default Chatbot;

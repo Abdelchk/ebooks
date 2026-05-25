@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { cartService } from '../services/cartService';
 import { useAuth } from './AuthContext';
 
@@ -8,7 +9,6 @@ export const CartProvider = ({ children }) => {
     const [cartCount, setCartCount] = useState(0);
     const { user } = useAuth();
 
-    // Rafraîchit le compteur depuis l'API
     const refreshCartCount = useCallback(async () => {
         if (!user) {
             setCartCount(0);
@@ -17,21 +17,32 @@ export const CartProvider = ({ children }) => {
         try {
             const count = await cartService.getCartCount();
             setCartCount(count);
-        } catch {
+        } catch (e) {
+            // Erreur réseau : on garde le compteur à 0
+            console.warn('Impossible de récupérer le compteur panier:', e.message);
             setCartCount(0);
         }
     }, [user]);
 
-    // Chargement initial + rechargement si l'utilisateur change
     useEffect(() => {
         refreshCartCount().then(r => r);
     }, [refreshCartCount]);
 
+    // useMemo évite de recréer l'objet value à chaque render
+    const contextValue = useMemo(
+        () => ({ cartCount, refreshCartCount }),
+        [cartCount, refreshCartCount]
+    );
+
     return (
-        <CartContext.Provider value={{ cartCount, refreshCartCount }}>
+        <CartContext.Provider value={contextValue}>
             {children}
         </CartContext.Provider>
     );
+};
+
+CartProvider.propTypes = {
+    children: PropTypes.node.isRequired,
 };
 
 export const useCart = () => {
@@ -41,4 +52,3 @@ export const useCart = () => {
     }
     return context;
 };
-

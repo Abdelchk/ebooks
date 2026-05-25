@@ -1,7 +1,8 @@
 // Utilitaires pour la validation des formulaires
 
 export const validateEmail = (email) => {
-  const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Z|a-z]{2,}$/;
+  // Supporte les domaines composés (ex: user@domain.co.uk)
+  const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
   return regex.test(email);
 };
 
@@ -11,7 +12,7 @@ export const validatePassword = (password) => {
 };
 
 export const validatePhoneNumber = (phoneNumber) => {
-  const regex = /^(0|\+33|0033)[1-9][0-9]{8}$/;
+  const regex = /^(0|\+33|0033)[1-9]\d{8}$/;
   return regex.test(phoneNumber);
 };
 
