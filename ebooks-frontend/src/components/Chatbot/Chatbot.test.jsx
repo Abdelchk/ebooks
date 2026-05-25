@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Chatbot from './Chatbot';
 import { chatService } from '../../services/chatService';
+import { cartService } from '../../services/cartService';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 jest.mock('../../services/chatService');
@@ -30,6 +31,14 @@ const openChatbot = () => {
     fireEvent.click(screen.getByLabelText("Ouvrir l'assistant bibliothèque"));
 };
 
+const sendMessageWithBooks = async (books) => {
+    chatService.sendMessage = jest.fn().mockResolvedValue({ reply: 'Résultat', books });
+    const input = screen.getByLabelText("Message pour l'assistant");
+    fireEvent.change(input, { target: { value: 'Hugo' } });
+    fireEvent.click(screen.getByLabelText('Envoyer'));
+    await waitFor(() => expect(screen.getByText('Résultat')).toBeInTheDocument());
+};
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 describe('Chatbot', () => {
     beforeEach(() => {
@@ -39,10 +48,12 @@ describe('Chatbot', () => {
         useAuth.mockReturnValue({ user: DEFAULT_USER });
         useCart.mockReturnValue({ cartCount: 0, refreshCartCount: mockRefreshCartCount });
         jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     afterEach(() => {
         console.error.mockRestore();
+        console.warn.mockRestore();
     });
 
     it('n\'est pas visible si l\'utilisateur n\'est pas connecté', () => {
@@ -61,6 +72,16 @@ describe('Chatbot', () => {
         openChatbot();
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByText(/Bonjour/)).toBeInTheDocument();
+    });
+
+    it('affiche ✕ quand le chat est ouvert et 💬 quand il est fermé', () => {
+        render(<Chatbot />);
+        const btn = screen.getByLabelText("Ouvrir l'assistant bibliothèque");
+        expect(btn.textContent).toBe('💬');
+        fireEvent.click(btn);
+        expect(btn.textContent).toBe('✕');
+        fireEvent.click(screen.getByLabelText('Fermer'));
+        expect(btn.textContent).toBe('💬');
     });
 
     it('ferme la fenêtre de chat au clic sur ✕', () => {
@@ -120,40 +141,51 @@ describe('Chatbot', () => {
     });
 
     it('affiche les cartes livres avec le bouton panier si disponible', async () => {
-        chatService.sendMessage = jest.fn().mockResolvedValue({
-            reply: 'Voici Les Misérables',
-            books: [{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 15 }]
-        });
-
         render(<Chatbot />);
         openChatbot();
+        await sendMessageWithBooks([{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 15 }]);
 
-        const input = screen.getByLabelText("Message pour l'assistant");
-        fireEvent.change(input, { target: { value: 'Hugo' } });
-        fireEvent.click(screen.getByLabelText('Envoyer'));
-
-        await waitFor(() => {
-            expect(screen.getByText('Les Misérables')).toBeInTheDocument();
-            expect(screen.getByLabelText('Ajouter Les Misérables au panier')).toBeInTheDocument();
-        });
+        expect(screen.getByText('Les Misérables')).toBeInTheDocument();
+        expect(screen.getByLabelText('Ajouter Les Misérables au panier')).toBeInTheDocument();
     });
 
     it('n\'affiche pas de bouton panier pour un livre épuisé', async () => {
-        chatService.sendMessage = jest.fn().mockResolvedValue({
-            reply: 'Livre épuisé',
-            books: [{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 0 }]
-        });
+        render(<Chatbot />);
+        openChatbot();
+        await sendMessageWithBooks([{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 0 }]);
+
+        expect(screen.getByText('Les Misérables')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Ajouter Les Misérables au panier')).not.toBeInTheDocument();
+        expect(screen.getByText(/Épuisé/)).toBeInTheDocument();
+    });
+
+    it('ajoute un livre au panier avec succès et affiche "✅ Ajouté !"', async () => {
+        cartService.addToCart = jest.fn().mockResolvedValue({});
 
         render(<Chatbot />);
         openChatbot();
+        await sendMessageWithBooks([{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 15 }]);
 
-        const input = screen.getByLabelText("Message pour l'assistant");
-        fireEvent.change(input, { target: { value: 'Hugo' } });
-        fireEvent.click(screen.getByLabelText('Envoyer'));
+        fireEvent.click(screen.getByLabelText('Ajouter Les Misérables au panier'));
 
         await waitFor(() => {
-            expect(screen.getByText('Les Misérables')).toBeInTheDocument();
-            expect(screen.queryByLabelText('Ajouter Les Misérables au panier')).not.toBeInTheDocument();
+            expect(cartService.addToCart).toHaveBeenCalledWith(3, 14);
+            expect(mockRefreshCartCount).toHaveBeenCalled();
+            expect(screen.getByText('✅ Ajouté !')).toBeInTheDocument();
+        });
+    });
+
+    it('affiche une erreur si l\'ajout au panier échoue', async () => {
+        cartService.addToCart = jest.fn().mockRejectedValue(new Error('Panier error'));
+
+        render(<Chatbot />);
+        openChatbot();
+        await sendMessageWithBooks([{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 15 }]);
+
+        fireEvent.click(screen.getByLabelText('Ajouter Les Misérables au panier'));
+
+        await waitFor(() => {
+            expect(screen.getByText(/Impossible d'ajouter au panier/)).toBeInTheDocument();
         });
     });
 
@@ -161,7 +193,7 @@ describe('Chatbot', () => {
         render(<Chatbot />);
         openChatbot();
         fireEvent.click(screen.getByLabelText("Effacer l'historique"));
-        // Après effacement, le useEffect re-sauvegarde le message initial → ce n'est pas null
+        // Après effacement, le useEffect re-sauvegarde le message initial
         const saved = JSON.parse(localStorage.getItem('chatbot_history'));
         expect(saved).toHaveLength(1);
         expect(saved[0].role).toBe('bot');
@@ -172,6 +204,62 @@ describe('Chatbot', () => {
         openChatbot();
         fireEvent.click(screen.getByLabelText('Envoyer'));
         expect(chatService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('charge l\'historique depuis le localStorage au montage', () => {
+        const history = [
+            { id: 'initial', role: 'bot', text: '👋 Bonjour ! Je suis votre assistant bibliothèque.\nPosez-moi une question ou cherchez un livre par titre ou auteur !' },
+            { id: 'user-1', role: 'user', text: 'message précédent' },
+            { id: 'bot-1', role: 'bot', text: 'réponse précédente' },
+        ];
+        localStorage.setItem('chatbot_history', JSON.stringify(history));
+
+        render(<Chatbot />);
+        openChatbot();
+
+        expect(screen.getByText('message précédent')).toBeInTheDocument();
+        expect(screen.getByText('réponse précédente')).toBeInTheDocument();
+    });
+
+    it('ignore un localStorage invalide et affiche le message initial', () => {
+        localStorage.setItem('chatbot_history', 'JSON_INVALIDE{{{');
+
+        render(<Chatbot />);
+        openChatbot();
+
+        expect(screen.getByText(/Bonjour/)).toBeInTheDocument();
+    });
+
+    it('ignore un localStorage contenant un non-tableau et affiche le message initial', () => {
+        localStorage.setItem('chatbot_history', JSON.stringify({ not: 'array' }));
+
+        render(<Chatbot />);
+        openChatbot();
+
+        expect(screen.getByText(/Bonjour/)).toBeInTheDocument();
+    });
+
+    it('supprime l\'erreur panier automatiquement après le délai', async () => {
+        jest.useFakeTimers();
+        cartService.addToCart = jest.fn().mockRejectedValue(new Error('err'));
+
+        render(<Chatbot />);
+        openChatbot();
+        await sendMessageWithBooks([{ id: 3, title: 'Les Misérables', author: 'Victor Hugo', quantity: 15 }]);
+
+        fireEvent.click(screen.getByLabelText('Ajouter Les Misérables au panier'));
+
+        await waitFor(() => {
+            expect(screen.getByText(/Impossible d'ajouter au panier/)).toBeInTheDocument();
+        });
+
+        act(() => { jest.advanceTimersByTime(4100); });
+
+        await waitFor(() => {
+            expect(screen.queryByText(/Impossible d'ajouter au panier/)).not.toBeInTheDocument();
+        });
+
+        jest.useRealTimers();
     });
 });
 

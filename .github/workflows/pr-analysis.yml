@@ -110,6 +110,9 @@ jobs:
           SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
           SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
           SPRING_PROFILES_ACTIVE: test
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           mvn -B verify sonar:sonar \
             -Dsonar.projectKey=$SONAR_PROJECT_KEY \
@@ -135,7 +138,9 @@ jobs:
               **/data/**,\
               **/enums/**,\
               ebooks-frontend/src/**/*.test.js,\
+              ebooks-frontend/src/**/*.test.jsx,\
               ebooks-frontend/src/**/*.spec.js,\
+              ebooks-frontend/src/**/*.spec.jsx,\
               ebooks-frontend/src/setupTests.js,\
               ebooks-frontend/src/reportWebVitals.js" \
             -Dsonar.coverage.exclusions="\
