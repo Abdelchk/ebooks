@@ -5,6 +5,7 @@ import { cartService } from '../services/cartService';
 import { reservationService } from '../services/reservationService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
+import { useCart } from '../context/CartContext';
 import LoanDurationSelector from '../components/LoanDurationSelector';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
@@ -12,6 +13,7 @@ import './Cart.css';
 
 const Cart = () => {
   const navigate = useNavigate();
+  const { refreshCartCount } = useCart();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,6 +60,7 @@ const Cart = () => {
   const confirmRemove = async () => {
     try {
       await cartService.removeFromCart(itemToRemove);
+      await refreshCartCount();
       setCartItems(cartItems.filter(item => item.id !== itemToRemove));
       hideModal();
       setItemToRemove(null);
@@ -78,6 +81,7 @@ const Cart = () => {
   const confirmClearCart = async () => {
     try {
       await cartService.clearCart();
+      await refreshCartCount();
       setCartItems([]);
       hideModal();
       showModal(MODAL_TYPES.SUCCESS_GENERIC, {
@@ -119,6 +123,7 @@ const Cart = () => {
       setError('');
       hideModal();
       await reservationService.validateCart();
+      await refreshCartCount();
       showModal(MODAL_TYPES.SUCCESS_CART_VALIDATED);
       setTimeout(() => {
         navigate('/reservations');

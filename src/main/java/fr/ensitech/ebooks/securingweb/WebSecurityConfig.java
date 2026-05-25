@@ -2,6 +2,7 @@ package fr.ensitech.ebooks.securingweb;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -15,11 +16,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -58,9 +60,9 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -73,8 +75,14 @@ public class WebSecurityConfig {
         http
                 // Configuration CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Désactivation du CSRF (nécessaire pour les APIs REST)
-                .csrf(csrf -> csrf.disable())
+                // CSRF : actif avec cookie lisible par JS (React lit XSRF-TOKEN et l'envoie en header)
+                // Les routes /api/** sont ignorées du CSRF car elles nécessitent authentification préalable
+                // et le CORS strict (localhost:3000 uniquement) réduit le risque résiduel
+                .csrf(csrf -> csrf
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
+                    .ignoringRequestMatchers("/api/auth/**", "/api/rest/**", "/api/admin/**", "/api/librarian/**")
+                )
 
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth

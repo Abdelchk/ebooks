@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import PrivateRoute from './components/PrivateRoute';
 import PasswordExpirationGuard from './components/PasswordExpirationGuard';
 import PasswordWarningBanner from './components/PasswordWarningBanner';
@@ -32,10 +33,12 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import './App.css';
 import AdminRoute from "./components/AdminRoute";
 import LibrarianRoute from "./components/LibrarianRoute";
+import Chatbot from "./components/Chatbot/Chatbot";
 
 function App() {
   return (
     <AuthProvider>
+      <CartProvider>
       <Router>
         <PasswordExpirationGuard>
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -127,9 +130,11 @@ function App() {
               </Routes>
             </div>
             <Footer />
+            <Chatbot />
           </div>
         </PasswordExpirationGuard>
       </Router>
+    </CartProvider>
     </AuthProvider>
   );
 }

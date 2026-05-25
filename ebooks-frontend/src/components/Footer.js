@@ -8,9 +8,11 @@ const Footer = () => {
       <Container>
         <Row>
           <Col md={4}>
-            <h5>
-              <i className="bi bi-book"></i> Ebooks
-            </h5>
+            <img
+              src="/logo.png"
+              alt="eBOOKS"
+              style={{ height: '64px', objectFit: 'contain', borderRadius: '8px', marginBottom: '10px' }}
+            />
             <p className="text-muted">
               Plateforme de gestion de livres électroniques sécurisée et conforme au RGPD.
             </p>
