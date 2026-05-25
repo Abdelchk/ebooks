@@ -6,6 +6,7 @@ import { cartService } from '../services/cartService';
 import { stockAlertService } from '../services/stockAlertService';
 import librarianService from '../services/librarianService';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import Navigation from '../components/Navbar';
 import LoanDurationSelector from "../components/LoanDurationSelector";
 import Loader from '../components/Loader';
@@ -15,6 +16,7 @@ const BookDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshCartCount } = useCart();
   const [book, setBook] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -70,6 +72,7 @@ const BookDetail = () => {
       setAddingToCart(true);
       setShowAddToCartModal(false);
       await cartService.addToCart(book.id, loanDuration);
+      await refreshCartCount(); // ← met à jour le badge panier dans la navbar
       setSuccessMessage(`"${book.title}" a été ajouté au panier pour ${loanDuration} jours !`);
       setShowSuccessModal(true);
     } catch (err) {

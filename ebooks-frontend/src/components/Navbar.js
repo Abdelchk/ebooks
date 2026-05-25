@@ -19,10 +19,14 @@ const Navigation = () => {
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
+    <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Container fluid>
         <Navbar.Brand as={Link} to="/accueil">
-          Ebooks
+          <img
+            src="/logo.png"
+            alt="eBOOKS"
+            style={{ height: '52px', objectFit: 'contain', borderRadius: '8px' }}
+          />
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="navbar-nav" />
         <Navbar.Collapse id="navbar-nav">
