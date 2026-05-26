@@ -2,9 +2,9 @@ package fr.ensitech.ebooks.entity;
 
 import jakarta.validation.constraints.NotEmpty;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.hibernate.validator.constraints.Length;
 
-import java.time.LocalDate;
 import java.util.Date;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +15,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,7 +35,7 @@ public class Book {
 	@Length(min= 2, max = 48, message = "Le titre ne peut pas dépasser 48 caractères")
 	private String title;
 	
-	@Column(length = 255, nullable = false)
+	@Column(nullable = false)
 	@NotEmpty(message = "La description ne peut pas être vide")
 	private String description;
 	
@@ -46,6 +45,7 @@ public class Book {
 	
 	@Column(nullable = false)
 	@NotNull(message = "La date de publication est obligatoire !")
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "Europe/Paris")
 	private Date publicationDate;
 	
 	@Column(length = 60, nullable = false)
