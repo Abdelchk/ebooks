@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import BookCoverUpload from './BookCoverUpload';
 import { imageService } from '../services/imageService';
 
@@ -25,10 +25,10 @@ const makeFile = (name = 'cover.jpg', type = 'image/jpeg', size = 1024) =>
 
 const renderComponent = (props = {}) => {
     const onUploadSuccess = props.onUploadSuccess ?? jest.fn();
-    const result = render(
+    const view = render(
         <BookCoverUpload onUploadSuccess={onUploadSuccess} {...props} />
     );
-    return { ...result, onUploadSuccess };
+    return { ...view, onUploadSuccess };
 };
 
 const uploadFile = (input, file) => {
@@ -94,9 +94,7 @@ describe('BookCoverUpload', () => {
             renderComponent();
             const fileInput = screen.getByLabelText(/Sélectionner une image de couverture/i);
 
-            await act(async () => {
-                fireEvent.change(fileInput, { target: { files: [] } });
-            });
+            fireEvent.change(fileInput, { target: { files: [] } });
 
             expect(imageService.uploadBookCover).not.toHaveBeenCalled();
         });
@@ -106,7 +104,7 @@ describe('BookCoverUpload', () => {
     describe('upload réussi', () => {
         it('upload sans image Cloudinary existante : n\'appelle pas deleteBookCover', async () => {
             imageService.uploadBookCover.mockResolvedValue(NEW_CLOUDINARY_URL);
-            const { onUploadSuccess } = renderComponent();
+            renderComponent();
             const fileInput = screen.getByLabelText(/Sélectionner une image de couverture/i);
 
             await act(async () => {
@@ -120,7 +118,7 @@ describe('BookCoverUpload', () => {
         it('upload avec une image Cloudinary existante : appelle deleteBookCover avant l\'upload', async () => {
             imageService.deleteBookCover.mockResolvedValue();
             imageService.uploadBookCover.mockResolvedValue(NEW_CLOUDINARY_URL);
-            const { onUploadSuccess } = renderComponent({ currentImageUrl: CLOUDINARY_URL });
+            renderComponent({ currentImageUrl: CLOUDINARY_URL });
             const fileInput = screen.getByLabelText(/Sélectionner une image de couverture/i);
 
             await act(async () => {
@@ -194,10 +192,8 @@ describe('BookCoverUpload', () => {
 
             act(() => { uploadFile(fileInput, makeFile()); });
 
-            await waitFor(() => {
-                expect(screen.getByText(/Upload en cours/i)).toBeInTheDocument();
-                expect(screen.getByRole('button', { name: /Upload en cours/i })).toBeDisabled();
-            });
+            expect(await screen.findByText(/Upload en cours/i)).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /Upload en cours/i })).toBeDisabled();
 
             await act(async () => { resolveUpload(NEW_CLOUDINARY_URL); });
         });
@@ -268,7 +264,6 @@ describe('BookCoverUpload', () => {
         });
     });
 });
-
 
 
 
