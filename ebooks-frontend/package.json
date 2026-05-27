@@ -22,10 +22,11 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "test:coverage": "react-scripts test --coverage --coverageReporters=lcov --watchAll=false --passWithNoTests",
+    "test:coverage": "react-scripts test --coverage --coverageReporters=lcov --coverageReporters=text --watchAll=false --passWithNoTests",
     "eject": "react-scripts eject",
     "lint": "eslint src/ --max-warnings 0",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "prepare": "husky && cd .. && git config core.hooksPath ebooks-frontend/.husky"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -52,13 +53,20 @@
       "!src/components/PasswordInput.js",
       "!src/components/PasswordStrengthIndicator.js",
       "!src/components/PasswordWarningBanner.js",
-      "!src/components/BookCoverUpload.js",
       "!src/context/AuthContext.js",
       "!src/services/api.js",
       "!src/hooks/**",
       "!src/config/**",
       "!src/styles/**"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 75,
+        "branches": 75,
+        "functions": 75,
+        "statements": 75
+      }
+    }
   },
   "devDependencies": {
     "eslint": "^8.57.1",
@@ -66,7 +74,9 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^4.6.2"
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
   },
   "eslintConfig": {
     "extends": [
