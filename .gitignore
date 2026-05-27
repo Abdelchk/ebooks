@@ -9,6 +9,7 @@ target/
 !package.json
 !package-lock.json
 !tsconfig.json
+!.lintstagedrc.json
 src/main/resources/application.properties
 src/main/resources/application-*.properties
 src/main/resources/application-*.yml

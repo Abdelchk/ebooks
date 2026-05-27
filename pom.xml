@@ -141,6 +141,19 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.39.0</version>
+		</dependency>
+
+		<!-- Override de la dépendance transitive vulnérable CVE-2025-48924 -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.20.0</version>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>

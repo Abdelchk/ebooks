@@ -1,0 +1,6 @@
+{
+  "src/**/*.{js,jsx}": [
+    "eslint --max-warnings 0"
+  ]
+}
+
