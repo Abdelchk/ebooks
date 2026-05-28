@@ -10,8 +10,10 @@ target/
 !package-lock.json
 !tsconfig.json
 !.lintstagedrc.json
+!vercel.json
 src/main/resources/application.properties
 src/main/resources/application-*.properties
+!src/main/resources/application-prod.properties
 src/main/resources/application-*.yml
 
 ### Documentation ###

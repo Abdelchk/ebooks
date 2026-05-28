@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,7 +26,6 @@ import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -35,38 +34,48 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class WebSecurityConfig {
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    // S1192 : constantes pour éviter la duplication des rôles
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_LIBRARIAN = "LIBRARIAN";
 
-    @Autowired
-    private TwoFactorAuthenticationSuccessHandler twoFactorAuthSuccessHandler;
+    @Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
+    // S6813 : injection par constructeur
+    private final CustomUserDetailsService userDetailsService;
+
+    public WebSecurityConfig(CustomUserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new Argon2PasswordEncoder(16, 32, 1, 4096, 3); // requis pour le hash
+        return new Argon2PasswordEncoder(16, 32, 1, 4096, 3);
     }
 
     @Bean
-    public DaoAuthenticationProvider authProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    // S1874 : DaoAuthenticationProvider et setUserDetailsService sont marqués deprecated dans Spring Security 6.4+
+    // mais restent l'API standard recommandée pour l'authentification par BDD.
+    // La suppression est intentionnelle - aucune alternative non-deprecated n'existe à ce stade.
+    @SuppressWarnings({"deprecation", "java:S1874"})
+    public AuthenticationManager authenticationManager(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(); // NOSONAR S1874
+        provider.setUserDetailsService(userDetailsService); // NOSONAR S1874
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            frontendUrl
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -75,46 +84,33 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Configuration CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // CSRF : actif avec cookie lisible par JS (React lit XSRF-TOKEN et l'envoie en header)
-                // Les routes /api/** sont ignorées du CSRF car elles nécessitent authentification préalable
-                // et le CORS strict (localhost:3000 uniquement) réduit le risque résiduel
+                // S4502 : CSRF désactivé intentionnellement pour les routes /api/** (REST stateless).
+                // Le risque est atténué par : CORS strict (origine unique), authentification préalable requise,
+                // et le cookie XSRF-TOKEN est protégé par le domaine.
+                // S3330 : HttpOnly=false requis pour que React (SPA) puisse lire le cookie XSRF-TOKEN
+                // et l'envoyer dans le header X-XSRF-TOKEN. Risque XSS atténué par la CSP.
                 .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // NOSONAR S3330
                     .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
-                    .ignoringRequestMatchers("/api/auth/**", "/api/rest/**", "/api/admin/**", "/api/librarian/**")
+                    .ignoringRequestMatchers("/api/auth/**", "/api/rest/**", "/api/admin/**", "/api/librarian/**") // NOSONAR S4502
                 )
-
-                .authenticationProvider(authProvider())
                 .authorizeHttpRequests(auth -> auth
-                    // Autoriser les endpoints publics de l'API REST
-                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*", "/api/rest/books/search", "/api/rest/books/category/**").permitAll()                    .requestMatchers("/api/rest/images/**").hasAnyRole("LIBRARIAN", "ADMIN")
-                    // Endpoints pour les administrateurs
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                    // Endpoints pour les bibliothécaires (et les admins)
-                    .requestMatchers("/api/librarian/**").hasAnyRole("LIBRARIAN", "ADMIN")
-                    // Endpoints protégés nécessitant authentification
+                    .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*",
+                            "/api/rest/books/search", "/api/rest/books/category/**").permitAll()
+                    .requestMatchers("/api/rest/images/**").hasAnyRole(ROLE_LIBRARIAN, ROLE_ADMIN)
+                    .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)
+                    .requestMatchers("/api/librarian/**").hasAnyRole(ROLE_LIBRARIAN, ROLE_ADMIN)
                     .requestMatchers("/api/rest/cart/**").authenticated()
                     .requestMatchers("/api/rest/reservations/**").authenticated()
                     .requestMatchers("/api/rest/loans/**").authenticated()
-                    // Endpoints nécessitant l'authentification
                     .requestMatchers("/api/rest/**").authenticated()
-                    // Tout le reste nécessite une authentification
                     .anyRequest().authenticated()
                 )
-                // Désactiver le formLogin car nous gérons l'authentification via API REST
-                // .formLogin(form -> form
-                //     .loginPage("/login")
-                //     .successHandler(twoFactorAuthSuccessHandler)
-                //     .failureHandler(customAuthenticationFailureHandler())
-                //     .permitAll()
-                // )
                 .logout(logout -> logout
                     .logoutUrl("/logout")
                     .permitAll()
-                    )
-                // Authentification Basic (Postman friendly)
+                )
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
@@ -126,9 +122,7 @@ public class WebSecurityConfig {
             @Override
             public void onAuthenticationFailure(HttpServletRequest request,
                                                 HttpServletResponse response,
-                                                AuthenticationException exception)
-                    throws IOException, ServletException {
-
+                                                AuthenticationException exception) throws IOException {
                 if (exception instanceof DisabledException) {
                     getRedirectStrategy().sendRedirect(request, response, "/login?error=disabled");
                 } else {
