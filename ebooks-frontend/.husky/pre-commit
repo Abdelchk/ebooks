@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-cd ebooks-frontend && npx lint-staged --config .lintstagedrc.json
+cd ebooks-frontend && npx lint-staged --config .lintstagedrc.json && npm run test:coverage
