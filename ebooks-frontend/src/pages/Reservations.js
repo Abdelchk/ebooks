@@ -5,6 +5,7 @@ import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
+import { toArray } from '../utils/arrayUtils';
 import './Reservations.css';
 
 const Reservations = ({ embedded = false }) => {
@@ -35,7 +36,7 @@ const Reservations = ({ embedded = false }) => {
   const loadReservations = async () => {
     try {
       const data = await reservationService.getUserReservations();
-      setReservations(data);
+      setReservations(toArray(data));
     } catch (err) {
       setError('Erreur lors du chargement des réservations');
       console.error(err);

@@ -68,10 +68,19 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+
+        // setAllowedOriginPatterns supporte les wildcards et est compatible avec allowCredentials=true
+        List<String> allowedOriginPatterns = new java.util.ArrayList<>(List.of(
             "http://localhost:3000",
-            frontendUrl
+            "https://*.vercel.app"   // Accepte tous les déploiements Vercel (prod + preview)
         ));
+        // Ajouter l'URL frontend configurée si elle est définie et différente
+        if (frontendUrl != null && !frontendUrl.isBlank()
+                && !frontendUrl.contains("localhost:3000")
+                && !frontendUrl.contains("vercel.app")) {
+            allowedOriginPatterns.add(frontendUrl);
+        }
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

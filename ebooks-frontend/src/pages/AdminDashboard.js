@@ -4,6 +4,7 @@ import Navigation from '../components/Navbar';
 import adminService from '../services/adminService';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
+import { toArray } from '../utils/arrayUtils';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -27,7 +28,7 @@ const AdminDashboard = () => {
   const loadUsers = async () => {
     try {
       const data = await adminService.getAllUsers();
-      setUsers(data);
+      setUsers(toArray(data));
     } catch (error) {
       console.error('Erreur:', error);
       if (error.response?.status === 403) {

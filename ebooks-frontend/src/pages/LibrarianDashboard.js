@@ -7,6 +7,7 @@ import { bookService } from '../services/bookService';
 import BookCoverUpload from '../components/BookCoverUpload';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
+import { toArray } from '../utils/arrayUtils';
 
 // Convertit une date reçue de l'API (dd/MM/yyyy ou yyyy-MM-dd) en yyyy-MM-dd pour l'input date
 const toInputDate = (dateStr) => {
@@ -89,7 +90,7 @@ const LibrarianDashboard = () => {
   const loadPendingReservations = async () => {
     try {
       const data = await librarianService.getPendingReservations();
-      setPendingReservations(data);
+      setPendingReservations(toArray(data));
     } catch (error) {
       console.error('Erreur:', error);
       if (error.response?.status === 403) {
@@ -101,7 +102,7 @@ const LibrarianDashboard = () => {
   const loadAllReservations = async (status = null) => {
     try {
       const data = await librarianService.getAllReservations(status);
-      setAllReservations(data);
+      setAllReservations(toArray(data));
     } catch (error) {
       console.error('Erreur:', error);
     }
@@ -110,7 +111,7 @@ const LibrarianDashboard = () => {
   const loadLowStockBooks = async () => {
     try {
       const data = await librarianService.getAvailabilityAlerts();
-      setLowStockBooks(data.alerts || []);
+      setLowStockBooks(toArray(data?.alerts ?? data));
     } catch (error) {
       console.error('Erreur:', error);
     }
@@ -121,7 +122,7 @@ const LibrarianDashboard = () => {
     setBooksLoading(true);
     try {
       const data = await bookService.getAllBooks();
-      setBooks(data);
+      setBooks(toArray(data));
     } catch (error) {
       console.error('Erreur chargement livres:', error);
     } finally {
