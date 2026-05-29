@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import adminService, {
     getAllUsers,
     getUserById,
@@ -10,10 +10,16 @@ import adminService, {
     getStats,
 } from './adminService';
 
-jest.mock('axios');
+jest.mock('./api', () => ({
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    patch: jest.fn(),
+    interceptors: { response: { use: jest.fn() } },
+}));
 
-const API_URL = 'http://localhost:8080/api/admin';
-const withCredentials = { withCredentials: true };
+const API_URL = '/api/admin';
 
 describe('adminService', () => {
     afterEach(() => {
@@ -22,86 +28,78 @@ describe('adminService', () => {
 
     it('getAllUsers appelle GET /api/admin/users', async () => {
         const mockUsers = [{ id: 1, email: 'user@test.com', role: 'USER' }];
-        axios.get.mockResolvedValue({ data: mockUsers });
+        api.get.mockResolvedValue({ data: mockUsers });
 
         const result = await getAllUsers();
 
-        expect(axios.get).toHaveBeenCalledWith(`${API_URL}/users`, withCredentials);
+        expect(api.get).toHaveBeenCalledWith(`${API_URL}/users`);
         expect(result).toEqual(mockUsers);
     });
 
     it('getUserById appelle GET /api/admin/users/:id', async () => {
         const mockUser = { id: 5, email: 'user5@test.com' };
-        axios.get.mockResolvedValue({ data: mockUser });
+        api.get.mockResolvedValue({ data: mockUser });
 
         const result = await getUserById(5);
 
-        expect(axios.get).toHaveBeenCalledWith(`${API_URL}/users/5`, withCredentials);
+        expect(api.get).toHaveBeenCalledWith(`${API_URL}/users/5`);
         expect(result.id).toBe(5);
     });
 
     it('createUser appelle POST /api/admin/users avec les données', async () => {
         const userData = { email: 'new@test.com', role: 'USER' };
-        axios.post.mockResolvedValue({ data: { id: 99, ...userData } });
+        api.post.mockResolvedValue({ data: { id: 99, ...userData } });
 
         const result = await createUser(userData);
 
-        expect(axios.post).toHaveBeenCalledWith(`${API_URL}/users`, userData, withCredentials);
+        expect(api.post).toHaveBeenCalledWith(`${API_URL}/users`, userData);
         expect(result.id).toBe(99);
     });
 
     it('updateUser appelle PUT /api/admin/users/:id avec les données', async () => {
         const userData = { email: 'updated@test.com' };
-        axios.put.mockResolvedValue({ data: { id: 3, ...userData } });
+        api.put.mockResolvedValue({ data: { id: 3, ...userData } });
 
         const result = await updateUser(3, userData);
 
-        expect(axios.put).toHaveBeenCalledWith(`${API_URL}/users/3`, userData, withCredentials);
+        expect(api.put).toHaveBeenCalledWith(`${API_URL}/users/3`, userData);
         expect(result.email).toBe('updated@test.com');
     });
 
     it('deleteUser appelle DELETE /api/admin/users/:id', async () => {
-        axios.delete.mockResolvedValue({ data: { message: 'Utilisateur supprimé' } });
+        api.delete.mockResolvedValue({ data: { message: 'Utilisateur supprimé' } });
 
         const result = await deleteUser(7);
 
-        expect(axios.delete).toHaveBeenCalledWith(`${API_URL}/users/7`, withCredentials);
+        expect(api.delete).toHaveBeenCalledWith(`${API_URL}/users/7`);
         expect(result.message).toBe('Utilisateur supprimé');
     });
 
     it('toggleUserStatus appelle PATCH /api/admin/users/:id/toggle-status', async () => {
-        axios.patch.mockResolvedValue({ data: { id: 2, active: false } });
+        api.patch.mockResolvedValue({ data: { id: 2, active: false } });
 
         const result = await toggleUserStatus(2);
 
-        expect(axios.patch).toHaveBeenCalledWith(
-            `${API_URL}/users/2/toggle-status`,
-            {},
-            withCredentials
-        );
+        expect(api.patch).toHaveBeenCalledWith(`${API_URL}/users/2/toggle-status`, {});
         expect(result.active).toBe(false);
     });
 
     it('changeUserRole appelle PATCH /api/admin/users/:id/role avec le rôle', async () => {
-        axios.patch.mockResolvedValue({ data: { id: 4, role: 'LIBRARIAN' } });
+        api.patch.mockResolvedValue({ data: { id: 4, role: 'LIBRARIAN' } });
 
         const result = await changeUserRole(4, 'LIBRARIAN');
 
-        expect(axios.patch).toHaveBeenCalledWith(
-            `${API_URL}/users/4/role`,
-            { role: 'LIBRARIAN' },
-            withCredentials
-        );
+        expect(api.patch).toHaveBeenCalledWith(`${API_URL}/users/4/role`, { role: 'LIBRARIAN' });
         expect(result.role).toBe('LIBRARIAN');
     });
 
     it('getStats appelle GET /api/admin/stats', async () => {
         const mockStats = { totalUsers: 100, activeLoans: 25 };
-        axios.get.mockResolvedValue({ data: mockStats });
+        api.get.mockResolvedValue({ data: mockStats });
 
         const result = await getStats();
 
-        expect(axios.get).toHaveBeenCalledWith(`${API_URL}/stats`, withCredentials);
+        expect(api.get).toHaveBeenCalledWith(`${API_URL}/stats`);
         expect(result.totalUsers).toBe(100);
     });
 
@@ -117,9 +115,8 @@ describe('adminService', () => {
     });
 
     it('getAllUsers propage les erreurs réseau', async () => {
-        axios.get.mockRejectedValue(new Error('Forbidden'));
+        api.get.mockRejectedValue(new Error('Forbidden'));
 
         await expect(getAllUsers()).rejects.toThrow('Forbidden');
     });
 });
-

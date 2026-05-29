@@ -30,36 +30,18 @@ const UpdatePassword = () => {
     // Vérifier si l'utilisateur est forcé de changer son mot de passe
     if (location.state?.forced) {
       setIsForced(true);
-      if (location.state?.message) {
-        // Ne pas mettre le message dans error, on l'affiche dans l'alerte spéciale
-        console.log('Message d\'expiration:', location.state.message);
-      }
     }
   }, [location]);
 
   const checkPasswordExpiration = async () => {
     try {
-      console.log('🔍 Vérification de l\'état du mot de passe...');
-      const response = await fetch('http://localhost:8080/api/auth/password-status', {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 Réponse de l\'API:', data);
+      const data = await authService.passwordStatus();
 
-        // Si le mot de passe est expiré, forcer l'affichage du message
-        if (data.expired) {
-          console.log('✅ Mot de passe EXPIRÉ détecté - Affichage du message forcé');
-          setIsForced(true);
-        } else {
-          console.log('ℹ️ Mot de passe valide (expired: false)');
-        }
-      } else {
-        console.error('❌ Erreur réponse API:', response.status);
+      if (data.expired) {
+        setIsForced(true);
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la vérification:', error);
+      console.error('Erreur lors de la vérification du mot de passe:', error.message);
     }
   };
 

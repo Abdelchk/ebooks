@@ -79,5 +79,10 @@ export const authService = {
     });
     return response.data;
   },
+
+  passwordStatus: async () => {
+    const response = await api.get('/api/auth/password-status');
+    return response.data;
+  },
 };
 
