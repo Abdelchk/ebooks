@@ -34,6 +34,11 @@ public class UserService implements IUserService {
     private static final String USER_NOT_FOUND = "Utilisateur non trouvé";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+    /** Regex de validation du mot de passe en clair (min 12 car., maj, min, chiffre, spécial). */
+    private static final java.util.regex.Pattern PASSWORD_PATTERN = java.util.regex.Pattern.compile(
+            "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*&#^()\\-_=+\\[\\]{};:',.<>/|`~\\\\]).{12,}$"
+    );
+
     private final IUserRepository userRepository;
     private final ISecurityQuestionsRepository securityQuestionsRepository;
     private final IUserSecurityAnswerRepository userSecurityAnswerRepository;
@@ -86,7 +91,18 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("Un utilisateur avec l'email " + user.getEmail() + " existe déjà");
         }
 
-        // Valider le mot de passe EN CLAIR avant de l'encoder (les contraintes @Pattern/@Length/@NotEmpty sont sur l'entité)
+        // Valider le mot de passe EN CLAIR avant de l'encoder
+        String rawPassword = user.getPassword();
+        if (rawPassword == null || rawPassword.isBlank()) {
+            throw new IllegalArgumentException("Le mot de passe est obligatoire !");
+        }
+        if (!PASSWORD_PATTERN.matcher(rawPassword).matches()) {
+            throw new IllegalArgumentException(
+                "Veuillez saisir un mot de passe valide. 12 caractères minimum, au moins une lettre majuscule, " +
+                "une lettre minuscule, un chiffre et un caractère spécial.");
+        }
+
+        // Valider les autres champs via Bean Validation
         Set<ConstraintViolation<User>> violations = validator.validate(user);
         if (!violations.isEmpty()) {
             throw new jakarta.validation.ConstraintViolationException(violations);
@@ -250,7 +266,7 @@ public class UserService implements IUserService {
         }
 
         // Validation du format du code
-        if (!code.matches("^[0-9]{6}$")) {
+        if (!code.matches("^\\d{6}$")) {
             return false;
         }
 

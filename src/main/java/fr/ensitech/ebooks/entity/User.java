@@ -4,13 +4,9 @@ import jakarta.validation.constraints.NotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.validator.constraints.Length;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
-
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -49,9 +45,8 @@ public class User {
 
 	@Column(nullable = false)
 	@NotEmpty(message = "Le mot de passe est obligatoire !")
-	@Length(min = 12, message = "Le mot de passe doit être constitué de 8 à 48 caractères !")
-	@Pattern(regexp = "^(?=.*[A-Za-zÀ-ÖØ-öø-ÿ])(?=.*\\d)(?=.*[@$!%*?&amp;#])[A-Za-zÀ-ÖØ-öø-ÿ\\d@$!%*?&amp;#]{12,}$", 
-             message = "Veuillez saisir un mot de passe valide. 12 caractères minimum, au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial.")
+	// Note: La validation du format du mot de passe est faite dans le service AVANT l'encodage.
+	// Le champ stocke un hash Argon2 qui ne respecterait pas un regex de mot de passe en clair.
 	private String password;
 
 	@Column(nullable = false)
@@ -63,19 +58,11 @@ public class User {
 	@Column(length = 15, nullable = false)
 	@NotEmpty(message = "Le numéro de téléphone est obligatoire !")
 	@Length(min = 10, message = "Le numéro de téléphone doit être constitué de 10 à 15 caractères !")
-	@Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Le numéro de téléphone doit être valide !")
+	@Pattern(regexp = "^\\+?\\d{10,15}$", message = "Le numéro de téléphone doit être valide !")
 	private String phoneNumber;
 	
 	@Column(length = 10, columnDefinition = "varchar(10) default 'client'")
 	private String role;
-
-	public String getRole() {
-		return role;
-	}
-
-	public void setRole(String role) {
-		this.role = role;
-	}
 
     @Column(nullable = false)
     private boolean enabled;
