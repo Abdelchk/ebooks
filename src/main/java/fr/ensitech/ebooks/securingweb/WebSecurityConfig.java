@@ -23,7 +23,12 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -94,18 +99,25 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        XorCsrfTokenRequestAttributeHandler requestHandler = new XorCsrfTokenRequestAttributeHandler();
+        // Spécifie au handler d'utiliser l'attribut "_csrf"
+        requestHandler.setCsrfRequestAttributeName("_csrf");
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // S4502 : CSRF désactivé intentionnellement pour les routes /api/** (REST stateless).
-                // Le risque est atténué par : CORS strict (origine unique), authentification préalable requise,
-                // et le cookie XSRF-TOKEN est protégé par le domaine.
-                // S3330 : HttpOnly=false requis pour que React (SPA) puisse lire le cookie XSRF-TOKEN
-                // et l'envoyer dans le header X-XSRF-TOKEN. Risque XSS atténué par la CSP.
+                // Activation et configuration de la protection CSRF pour notre SPA (Single Page Application).
+                // S3330 : HttpOnly=false est INTENTIONNEL et SÉCURISÉ dans ce contexte :
+                //   - Le cookie XSRF-TOKEN ne contient PAS de credential de session (il ne donne pas accès à lui seul).
+                //   - Il doit être lisible par JavaScript pour le pattern "Double Submit Cookie".
+                //   - En cross-origin (Vercel → backend), JS ne peut pas lire ce cookie ; on expose donc
+                //     aussi le token via GET /api/auth/csrf. Le cookie reste utile pour les environnements
+                //     same-origin (ex : développement local).
+                //   - Le cookie de session JSESSIONID (lui, sensible) reste toujours HttpOnly=true.
                 .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // NOSONAR S3330
-                    .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
-                    .ignoringRequestMatchers("/api/auth/**", "/api/rest/**", "/api/admin/**", "/api/librarian/**") // NOSONAR S4502
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // NOSONAR java:S3330
+                    .csrfTokenRequestHandler(requestHandler)
                 )
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*",
                             "/api/rest/books/search", "/api/rest/books/category/**").permitAll()
@@ -160,5 +172,22 @@ public class WebSecurityConfig {
                 }
             }
         };
+    }
+
+    /**
+     * Filtre de servlet pour garantir que le jeton CSRF est généré et stocké dans un cookie XSRF-TOKEN.
+     * C'est indispensable pour les SPA (React) afin que le premier appel GET (qui n'a pas besoin de CSRF en soi)
+     * reçoive le cookie CSRF nécéssaire pour valider les futurs appels POST/PUT/DELETE de modification.
+     */
+    private static class CsrfCookieFilter extends OncePerRequestFilter {
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                throws ServletException, IOException {
+            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            if (csrfToken != null) {
+                csrfToken.getToken(); // force la génération du token et l'écriture du cookie XSRF-TOKEN
+            }
+            filterChain.doFilter(request, response);
+        }
     }
 }

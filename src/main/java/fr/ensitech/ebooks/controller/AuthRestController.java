@@ -7,9 +7,9 @@ import fr.ensitech.ebooks.service.RecaptchaService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,6 +23,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -35,21 +36,34 @@ public class AuthRestController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthRestController.class);
 
-    @Autowired
-    private IUserService userService;
+    // S1192 : constantes pour les clés JSON dupliquées
+    private static final String KEY_SUCCESS       = "success";
+    private static final String KEY_MESSAGE       = "message";
+    private static final String KEY_ERROR         = "error";
+    private static final String KEY_AUTHENTICATED = "authenticated";
+    private static final String KEY_VALID         = "valid";
+    private static final String KEY_EMAIL         = "email";
+    private static final String MSG_USER_NOT_FOUND = "Utilisateur non trouvé";
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    // S6813 : injection par constructeur
+    private final IUserService userService;
+    private final AuthenticationManager authenticationManager;
+    private final RecaptchaService recaptchaService;
 
-    @Autowired
-    private RecaptchaService recaptchaService;
+    public AuthRestController(IUserService userService,
+                              AuthenticationManager authenticationManager,
+                              RecaptchaService recaptchaService) {
+        this.userService           = userService;
+        this.authenticationManager = authenticationManager;
+        this.recaptchaService      = recaptchaService;
+    }
 
     /**
      * Endpoint pour l'authentification
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request, 
-                                   HttpServletRequest httpServletRequest) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request,
+                                                     HttpServletRequest httpServletRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -57,48 +71,46 @@ public class AuthRestController {
 
             SecurityContext securityContext = SecurityContextHolder.getContext();
             securityContext.setAuthentication(authentication);
-            
+
             httpServletRequest.getSession().setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, 
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 securityContext
             );
 
             Optional<User> userOpt = userService.findByEmail(request.getEmail());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
-                
+
                 // Vérifier si un code 2FA a déjà été envoyé dans les 24h
-                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                LocalDateTime now = LocalDateTime.now();
                 boolean codeRecentlySent = user.getLastVerificationCodeSentAt() != null &&
                         user.getLastVerificationCodeSentAt().isAfter(now.minusHours(24));
-                
+
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", true);
-                response.put("message", "Connexion réussie");
+                response.put(KEY_SUCCESS, true);
+                response.put(KEY_MESSAGE, "Connexion réussie");
                 response.put("userId", user.getId());
-                response.put("email", user.getEmail());
+                response.put(KEY_EMAIL, user.getEmail());
                 response.put("firstname", user.getFirstname());
                 response.put("lastname", user.getLastname());
-                
+
                 if (codeRecentlySent) {
-                    // Pas besoin de 2FA, redirection directe vers /accueil
                     response.put("requiresTwoFactor", false);
                     response.put("redirectTo", "/accueil");
                 } else {
-                    // Générer et envoyer le code 2FA
                     userService.generateVerificationCode(user);
                     response.put("requiresTwoFactor", true);
                     response.put("redirectTo", "/verify-code");
                 }
-                
+
                 return ResponseEntity.ok(response);
             }
-            
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("success", false, "message", "Identifiants invalides"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Identifiants invalides"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("success", false, "message", "Email ou mot de passe incorrect"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Email ou mot de passe incorrect"));
         }
     }
 
@@ -106,41 +118,37 @@ public class AuthRestController {
      * Endpoint pour vérifier si l'utilisateur est authentifié
      */
     @GetMapping("/check")
-    public ResponseEntity<?> checkAuth(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> checkAuth(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails != null) {
             Optional<User> userOpt = userService.findByEmail(userDetails.getUsername());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 Map<String, Object> response = new HashMap<>();
-                response.put("authenticated", true);
-                response.put("email", user.getEmail());
+                response.put(KEY_AUTHENTICATED, true);
+                response.put(KEY_EMAIL, user.getEmail());
                 response.put("firstname", user.getFirstname());
                 response.put("lastname", user.getLastname());
-                response.put("role", user.getRole()); // rôle transmis au frontend
+                response.put("role", user.getRole());
                 response.put("userId", user.getId());
-
-                // Ajouter les informations d'expiration du mot de passe
-                Map<String, Object> passwordStatus = checkPasswordExpiration(user);
-                response.put("passwordStatus", passwordStatus);
-                
+                response.put("passwordStatus", checkPasswordExpiration(user));
                 return ResponseEntity.ok(response);
             }
         }
-        return ResponseEntity.ok(Map.of("authenticated", false));
+        return ResponseEntity.ok(Map.<String, Object>of(KEY_AUTHENTICATED, false));
     }
 
     /**
      * Endpoint pour la déconnexion
      */
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request) {
         try {
             request.getSession().invalidate();
             SecurityContextHolder.clearContext();
-            return ResponseEntity.ok(Map.of("success", true, "message", "Déconnexion réussie"));
+            return ResponseEntity.ok(Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Déconnexion réussie"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur lors de la déconnexion"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de la déconnexion"));
         }
     }
 
@@ -148,22 +156,19 @@ public class AuthRestController {
      * Endpoint pour l'inscription
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
         try {
-            // Vérifier le reCAPTCHA
             if (request.getRecaptchaToken() == null || request.getRecaptchaToken().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "Veuillez valider le reCAPTCHA"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Veuillez valider le reCAPTCHA"));
             }
 
-            // Valider le token reCAPTCHA
             boolean isTokenValid = recaptchaService.verifyToken(request.getRecaptchaToken(), "REGISTER");
             if (!isTokenValid) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "La vérification reCAPTCHA a échoué"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "La vérification reCAPTCHA a échoué"));
             }
 
-            // Token reCAPTCHA valide, créer l'utilisateur
             User user = new User();
             user.setFirstname(request.getFirstname());
             user.setLastname(request.getLastname());
@@ -175,13 +180,14 @@ public class AuthRestController {
             User createdUser = userService.addOrUpdateUser(user);
             userService.addSecurityAnswer(createdUser, request.getQuestionId(), request.getSecurityAnswer());
 
-            return ResponseEntity.ok(Map.of("success", true, "message", "Inscription réussie. Veuillez vérifier votre email."));
+            return ResponseEntity.ok(
+                Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Inscription réussie. Veuillez vérifier votre email."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur lors de l'inscription : " + e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de l'inscription : " + e.getMessage()));
         }
     }
 
@@ -202,13 +208,13 @@ public class AuthRestController {
      * Obtenir la clé reCAPTCHA publique
      */
     @GetMapping("/recaptcha-key")
-    public ResponseEntity<?> getRecaptchaKey() {
+    public ResponseEntity<Map<String, Object>> getRecaptchaKey() {
         try {
             String siteKey = recaptchaService.getSiteKey();
-            return ResponseEntity.ok(Map.of("siteKey", siteKey));
+            return ResponseEntity.ok(Map.<String, Object>of("siteKey", siteKey));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Impossible de récupérer la clé reCAPTCHA"));
+                .body(Map.<String, Object>of(KEY_ERROR, "Impossible de récupérer la clé reCAPTCHA"));
         }
     }
 
@@ -216,17 +222,18 @@ public class AuthRestController {
      * Initier la réinitialisation du mot de passe
      */
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> request) {
         try {
-            String email = request.get("email");
+            String email = request.get(KEY_EMAIL);
             userService.initiateForgotPassword(email);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Un email de réinitialisation a été envoyé"));
+            return ResponseEntity.ok(
+                Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Un email de réinitialisation a été envoyé"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur lors de l'envoi de l'email"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de l'envoi de l'email"));
         }
     }
 
@@ -234,26 +241,27 @@ public class AuthRestController {
      * Réinitialiser le mot de passe
      */
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             boolean success = userService.resetPassword(
-                request.getToken(), 
-                request.getNewPassword(), 
+                request.getToken(),
+                request.getNewPassword(),
                 request.getConfirmPassword()
             );
-            
+
             if (success) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "Mot de passe réinitialisé avec succès"));
+                return ResponseEntity.ok(
+                    Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Mot de passe réinitialisé avec succès"));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "Erreur lors de la réinitialisation"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de la réinitialisation"));
             }
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur serveur"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur serveur"));
         }
     }
 
@@ -261,12 +269,12 @@ public class AuthRestController {
      * Valider le token de réinitialisation
      */
     @GetMapping("/validate-reset-token")
-    public ResponseEntity<?> validateResetToken(@RequestParam String token) {
+    public ResponseEntity<Map<String, Object>> validateResetToken(@RequestParam String token) {
         try {
             boolean valid = userService.validateResetToken(token);
-            return ResponseEntity.ok(Map.of("valid", valid));
+            return ResponseEntity.ok(Map.<String, Object>of(KEY_VALID, valid));
         } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("valid", false));
+            return ResponseEntity.ok(Map.<String, Object>of(KEY_VALID, false));
         }
     }
 
@@ -274,18 +282,19 @@ public class AuthRestController {
      * Vérifier l'email avec token
      */
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String token) {
         try {
             String result = userService.validateVerificationToken(token);
-            if ("valid".equals(result)) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "Votre compte est vérifié"));
+            if (KEY_VALID.equals(result)) {
+                return ResponseEntity.ok(
+                    Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Votre compte est vérifié"));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "Token de vérification invalide"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Token de vérification invalide"));
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur lors de la vérification"));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de la vérification"));
         }
     }
 
@@ -293,22 +302,22 @@ public class AuthRestController {
      * Vérifier le code 2FA
      */
     @PostMapping("/verify-code")
-    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request,
-                                        @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> verifyCode(@RequestBody Map<String, String> request,
+                                                          @AuthenticationPrincipal UserDetails userDetails) {
         try {
             String code = request.get("code");
             User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
-            
+                .orElseThrow(() -> new IllegalArgumentException(MSG_USER_NOT_FOUND));
+
             if (userService.validateVerificationCode(user, code)) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "Code vérifié"));
+                return ResponseEntity.ok(Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Code vérifié"));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "Code invalide ou expiré"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Code invalide ou expiré"));
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         }
     }
 
@@ -316,16 +325,16 @@ public class AuthRestController {
      * Renvoyer le code 2FA
      */
     @PostMapping("/resend-code")
-    public ResponseEntity<?> resendCode(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> resendCode(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
-            
+                .orElseThrow(() -> new IllegalArgumentException(MSG_USER_NOT_FOUND));
+
             userService.generateVerificationCode(user);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Un nouveau code a été envoyé"));
+            return ResponseEntity.ok(Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Un nouveau code a été envoyé"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         }
     }
 
@@ -333,16 +342,16 @@ public class AuthRestController {
      * Obtenir la question de sécurité de l'utilisateur connecté
      */
     @GetMapping("/security-question")
-    public ResponseEntity<?> getSecurityQuestion(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> getSecurityQuestion(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
-            
+                .orElseThrow(() -> new IllegalArgumentException(MSG_USER_NOT_FOUND));
+
             SecurityQuestions question = userService.getSecurityQuestionForUser(user);
-            return ResponseEntity.ok(Map.of("question", question.getQuestion(), "id", question.getId()));
+            return ResponseEntity.ok(Map.<String, Object>of("question", question.getQuestion(), "id", question.getId()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_ERROR, e.getMessage()));
         }
     }
 
@@ -350,14 +359,14 @@ public class AuthRestController {
      * Mettre à jour le mot de passe de l'utilisateur connecté
      */
     @PostMapping("/update-password")
-    public ResponseEntity<?> updatePassword(@RequestBody UpdatePasswordRequest request,
-                                           @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> updatePassword(@RequestBody UpdatePasswordRequest request,
+                                                              @AuthenticationPrincipal UserDetails userDetails) {
         try {
             logger.debug("Tentative de mise à jour du mot de passe pour l'utilisateur: {}", userDetails.getUsername());
 
             User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
-            
+                .orElseThrow(() -> new IllegalArgumentException(MSG_USER_NOT_FOUND));
+
             logger.debug("Utilisateur trouvé: {}", user.getEmail());
 
             SecurityQuestions securityQuestion = userService.getSecurityQuestionForUser(user);
@@ -371,21 +380,22 @@ public class AuthRestController {
                 securityQuestion.getId(),
                 request.getSecurityAnswer()
             );
-            
+
             if (success) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "Mot de passe mis à jour avec succès"));
+                return ResponseEntity.ok(
+                    Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Mot de passe mis à jour avec succès"));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", "Erreur lors de la mise à jour"));
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de la mise à jour"));
             }
         } catch (IllegalArgumentException e) {
             logger.error("Erreur lors de la mise à jour du mot de passe : {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("success", false, "message", e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         } catch (Exception e) {
             logger.error("Erreur serveur lors de la mise à jour du mot de passe", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Erreur serveur: " + e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur serveur: " + e.getMessage()));
         }
     }
 
@@ -393,21 +403,21 @@ public class AuthRestController {
      * Endpoint pour vérifier l'état d'expiration du mot de passe
      */
     @GetMapping("/password-status")
-    public ResponseEntity<?> getPasswordStatus(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> getPasswordStatus(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("authenticated", false));
+                .body(Map.<String, Object>of(KEY_AUTHENTICATED, false));
         }
-        
+
         try {
             User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
-            
+                .orElseThrow(() -> new IllegalArgumentException(MSG_USER_NOT_FOUND));
+
             Map<String, Object> passwordStatus = checkPasswordExpiration(user);
             return ResponseEntity.ok(passwordStatus);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Erreur lors de la vérification"));
+                .body(Map.<String, Object>of(KEY_ERROR, "Erreur lors de la vérification"));
         }
     }
 
@@ -420,36 +430,58 @@ public class AuthRestController {
         status.put("expired", false);
         status.put("warning", false);
         status.put("daysRemaining", null);
-        status.put("message", null);
-        
+        status.put(KEY_MESSAGE, null);
+
         LocalDate lastPasswordUpdate = user.getLastPasswordUpdateDate();
-        
-        // Si l'utilisateur n'a jamais changé son mot de passe
+
         if (lastPasswordUpdate == null) {
             status.put("neverChanged", true);
             return status;
         }
-        
+
         status.put("neverChanged", false);
-        
-        // Vérifier si le mot de passe a expiré (12 semaines = 84 jours)
+
         long daysSinceLastUpdate = ChronoUnit.DAYS.between(lastPasswordUpdate, LocalDate.now());
         long daysRemaining = 84 - daysSinceLastUpdate;
-        
+
         status.put("daysSinceLastUpdate", daysSinceLastUpdate);
         status.put("daysRemaining", daysRemaining);
-        
+
         if (daysSinceLastUpdate >= 84) {
-            // Mot de passe expiré
             status.put("expired", true);
-            status.put("message", "Votre mot de passe a expiré. Vous devez le changer pour continuer.");
+            status.put(KEY_MESSAGE, "Votre mot de passe a expiré. Vous devez le changer pour continuer.");
         } else if (daysSinceLastUpdate >= 77) {
-            // Avertissement (expire dans les 7 jours)
             status.put("warning", true);
-            status.put("message", "Attention : Votre mot de passe expire dans " + daysRemaining + " jour(s).");
+            status.put(KEY_MESSAGE, "Attention : Votre mot de passe expire dans " + daysRemaining + " jour(s).");
         }
-        
+
         return status;
+    }
+
+    /**
+     * Endpoint CSRF cross-origin : retourne le jeton CSRF dans le corps JSON.
+     *
+     * Pourquoi cet endpoint est nécessaire :
+     * Le mécanisme standard "Double Submit Cookie" (CookieCsrfTokenRepository) ne fonctionne
+     * qu'en same-origin : le JavaScript côté Vercel ne peut PAS lire un cookie posé par
+     * le backend sur un domaine différent (Same-Origin Policy).
+     * → Solution : on expose le token en clair dans le corps HTTP. Le frontend le stocke
+     *   en mémoire et le renvoie manuellement dans l'en-tête X-XSRF-TOKEN.
+     *
+     * Cet endpoint est public (couvert par /api/auth/** dans WebSecurityConfig).
+     * Il ne retourne que le token masqué XOR ; la session reste protégée côté serveur.
+     */
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, Object>> getCsrfToken(CsrfToken csrfToken) {
+        if (csrfToken == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.<String, Object>of(KEY_ERROR, "CSRF token non disponible"));
+        }
+        return ResponseEntity.ok(Map.<String, Object>of(
+            "token",         csrfToken.getToken(),
+            "headerName",    csrfToken.getHeaderName(),
+            "parameterName", csrfToken.getParameterName()
+        ));
     }
 
     // DTO Classes
@@ -467,7 +499,7 @@ public class AuthRestController {
         private String lastname;
         private String email;
         private String password;
-        private java.time.LocalDate birthdate;
+        private LocalDate birthdate;
         private String phoneNumber;
         private Long questionId;
         private String securityAnswer;
@@ -491,4 +523,3 @@ public class AuthRestController {
         private String securityAnswer;
     }
 }
-
