@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>fr.ensitech</groupId>
 	<artifactId>ebooks</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>ebooks</name>
 	<description>Projet de digitalisation d&apos;une bibliothèque</description>
 	<url/>
@@ -184,6 +184,12 @@
     </repositories>
 
 	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

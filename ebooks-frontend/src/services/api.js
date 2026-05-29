@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const FRONTEND_VERSION = process.env.REACT_APP_VERSION || 'dev';
 
 // Configuration d'axios pour inclure les credentials
 axios.defaults.withCredentials = true;
@@ -10,6 +11,7 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Frontend-Version': FRONTEND_VERSION,
   },
 });
 
