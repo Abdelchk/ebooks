@@ -3,7 +3,6 @@ package fr.ensitech.ebooks.controller;
 import fr.ensitech.ebooks.entity.Book;
 import fr.ensitech.ebooks.service.IBookService;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +14,6 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/rest/books")
 public class BookRestController implements IBookController{
     @Autowired

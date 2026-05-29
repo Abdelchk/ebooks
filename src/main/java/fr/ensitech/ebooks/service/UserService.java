@@ -15,6 +15,7 @@ import fr.ensitech.ebooks.utils.PasswordHistoryTokenizer;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,10 @@ public class UserService implements IUserService {
 
     private static final String USER_NOT_FOUND = "Utilisateur non trouvé";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /** URL du frontend — injectée depuis application.properties / application-prod.properties */
+    @Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     /** Regex de validation du mot de passe en clair (min 12 car., maj, min, chiffre, spécial). */
     private static final java.util.regex.Pattern PASSWORD_PATTERN = java.util.regex.Pattern.compile(
@@ -119,8 +124,8 @@ public class UserService implements IUserService {
         user.setVerificationToken(token);
         userRepository.save(user);
 
-        // Lien de vérification pour React (CORRIGÉ)
-        String activationlink = "http://localhost:3000/verify-email?token=" + token;
+        // Lien de vérification pour React — utilise l'URL du frontend (local ou prod)
+        String activationlink = frontendUrl + "/verify-email?token=" + token;
 
         emailContext = new EmailContext();
         emailContext.setStrategy(new ActivationEmailStrategy(emailService));
@@ -370,8 +375,8 @@ public class UserService implements IUserService {
 
         userRepository.save(user);
 
-        // Envoyer l'email de réinitialisation (CORRIGÉ pour React)
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+        // Envoyer l'email de réinitialisation — utilise l'URL du frontend (local ou prod)
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
         emailContext = new EmailContext();
         emailContext.setStrategy(new ForgotPasswordEmailStrategy(emailService));
         emailContext.executeStrategy(user.getEmail(), resetLink);

@@ -11,7 +11,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,6 +18,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -74,7 +74,8 @@ public class WebSecurityConfig {
             "http://localhost:3000",
             "https://*.vercel.app"   // Accepte tous les déploiements Vercel (prod + preview)
         ));
-        // Ajouter l'URL frontend configurée si elle est définie et différente
+        // Ajouter un domaine custom uniquement s'il n'est pas déjà couvert
+        // (localhost:3000 et *.vercel.app sont déjà dans la liste ci-dessus)
         if (frontendUrl != null && !frontendUrl.isBlank()
                 && !frontendUrl.contains("localhost:3000")
                 && !frontendUrl.contains("vercel.app")) {
@@ -120,9 +121,28 @@ public class WebSecurityConfig {
                     .logoutUrl("/logout")
                     .permitAll()
                 )
-                .httpBasic(Customizer.withDefaults());
+                // Remplace httpBasic par défaut qui envoie WWW-Authenticate: Basic
+                // et déclenche la popup native du navigateur sur chaque 401.
+                // Notre entry point retourne du JSON proprement sans popup.
+                .httpBasic(basic -> basic.authenticationEntryPoint(apiAuthenticationEntryPoint()))
+                .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(apiAuthenticationEntryPoint())
+                );
 
         return http.build();
+    }
+
+    /**
+     * Entry point personnalisé : retourne un JSON 401 sans header WWW-Authenticate.
+     * Évite la popup native "Se connecter" du navigateur sur les requêtes API.
+     */
+    @Bean
+    public AuthenticationEntryPoint apiAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"authenticated\":false,\"message\":\"Non authentifié\"}");
+        };
     }
 
     @Bean
