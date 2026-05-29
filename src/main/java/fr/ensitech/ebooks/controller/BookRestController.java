@@ -5,7 +5,8 @@ import fr.ensitech.ebooks.service.IBookService;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,38 +16,37 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/rest/books")
-public class BookRestController implements IBookController{
-    @Autowired
-    private IBookService bookService;
+public class BookRestController implements IBookController {
 
-    // URI => http://localhost:8080/api/rest/books/infos
+    private static final Logger logger = LoggerFactory.getLogger(BookRestController.class);
+
+    private final IBookService bookService;
+
+    public BookRestController(IBookService bookService) {
+        this.bookService = bookService;
+    }
+
     @Override
     @GetMapping("/infos")
     public String getInfos() {
         return "Bonjour de la part d'Ensitech.";
     }
 
-    // URI => http://localhost:8080/api/rest/books/create
     @Override
     @PostMapping("/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public ResponseEntity<Book> createBook(@RequestBody Book book) {
-        System.out.println("create invoqued");
         if (book == null
                 || book.getTitle() == null || book.getTitle().isBlank()
-                || book.getDescription() == null || book.getDescription().isBlank()
-                //...etc
-                ) {
-
+                || book.getDescription() == null || book.getDescription().isBlank()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-
         try {
             Book _book = bookService.addOrUpdate(book);
             return new ResponseEntity<>(_book, HttpStatus.CREATED);
-
         } catch (Exception e) {
+            logger.error("Erreur lors de la création du livre", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -56,17 +56,14 @@ public class BookRestController implements IBookController{
         if (book == null
                 || book.getId() == null || book.getId() <= 0
                 || book.getTitle() == null || book.getTitle().isBlank()
-                || book.getDescription() == null || book.getDescription().isBlank()
-                //...etc
-                ) {
-
+                || book.getDescription() == null || book.getDescription().isBlank()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
         try {
             bookService.addOrUpdate(book);
             return new ResponseEntity<>("Livre mis à jour avec succès", HttpStatus.ACCEPTED);
-
         } catch (Exception e) {
+            logger.error("Erreur lors de la mise à jour du livre", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -75,14 +72,14 @@ public class BookRestController implements IBookController{
     @DeleteMapping("remove/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public ResponseEntity<String> deleteBook(@PathVariable("id") Long id) {
-        if (id <=0) {
+        if (id <= 0) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
         try {
             bookService.deleteBook(id);
             return new ResponseEntity<>("Le Livre (id = " + id + ") a été supprimé avec succès", HttpStatus.OK);
-
         } catch (Exception e) {
+            logger.error("Erreur lors de la suppression du livre id={}", id, e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -96,8 +93,8 @@ public class BookRestController implements IBookController{
         try {
             Book book = bookService.getBookById(id);
             return new ResponseEntity<>(book, HttpStatus.OK);
-
         } catch (Exception e) {
+            logger.error("Erreur lors de la récupération du livre id={}", id, e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -107,16 +104,13 @@ public class BookRestController implements IBookController{
     @Produces(MediaType.APPLICATION_JSON)
     public ResponseEntity<List<Book>> getAllBooks() {
         try {
-            System.out.println("API /all appelée - Récupération des livres...");
             List<Book> books = bookService.getBooks();
-            System.out.println("Nombre de livres récupérés : " + books.size());
+            logger.debug("Nombre de livres récupérés : {}", books.size());
             return new ResponseEntity<>(books, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Erreur lors de la récupération des livres : " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la récupération des livres", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
 
     @GetMapping("/search")
@@ -126,8 +120,7 @@ public class BookRestController implements IBookController{
             List<Book> books = bookService.searchBooks(query);
             return new ResponseEntity<>(books, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Erreur lors de la recherche des livres : " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la recherche des livres", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -139,8 +132,7 @@ public class BookRestController implements IBookController{
             List<Book> books = bookService.getBooksByCategory(category);
             return new ResponseEntity<>(books, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Erreur lors de la récupération des livres par catégorie : " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la récupération des livres par catégorie", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -154,8 +146,7 @@ public class BookRestController implements IBookController{
             List<Book> books = bookService.searchBooksByCategory(category, query);
             return new ResponseEntity<>(books, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Erreur lors de la recherche par catégorie : " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la recherche par catégorie", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -181,7 +172,7 @@ public class BookRestController implements IBookController{
     }
 
     @Override
-    public ResponseEntity<Book> getBookByIsbn(String isbn) throws Exception {
+    public ResponseEntity<Book> getBookByIsbn(String isbn) {
         return null;
     }
 
