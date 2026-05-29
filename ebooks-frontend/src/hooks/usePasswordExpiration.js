@@ -1,6 +1,7 @@
 // hooks/usePasswordExpiration.js
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 /**
  * Hook personnalisé pour gérer l'expiration du mot de passe
@@ -15,10 +16,7 @@ export const usePasswordExpiration = () => {
   useEffect(() => {
     const checkPasswordStatus = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/auth/check', {
-          credentials: 'include'
-        });
-        const data = await response.json();
+        const data = await authService.checkAuth();
 
         if (data.authenticated && data.passwordStatus) {
           setPasswordStatus(data.passwordStatus);

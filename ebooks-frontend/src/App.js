@@ -5,6 +5,7 @@ import { CartProvider } from './context/CartContext';
 import PrivateRoute from './components/PrivateRoute';
 import PasswordExpirationGuard from './components/PasswordExpirationGuard';
 import PasswordWarningBanner from './components/PasswordWarningBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 
 // Pages
@@ -37,105 +38,107 @@ import Chatbot from "./components/Chatbot/Chatbot";
 
 function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-      <Router>
-        <PasswordExpirationGuard>
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            <PasswordWarningBanner />
-            <div style={{ flex: 1 }}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/accueil" replace />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route path="/last-step" element={<LastStep />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <CartProvider>
+            <Router>
+              <PasswordExpirationGuard>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <PasswordWarningBanner />
+                <div style={{ flex: 1 }}>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/accueil" replace />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/last-step" element={<LastStep />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-            {/* Routes publiques */}
-            <Route path="/accueil" element={<Accueil />} />
-            <Route path="/book/:id" element={<BookDetail />} />
+                    {/* Routes publiques */}
+                    <Route path="/accueil" element={<Accueil />} />
+                    <Route path="/book/:id" element={<BookDetail />} />
 
-            {/* Routes protégées */}
-            <Route
-              path="/cart"
-              element={
-                <PrivateRoute>
-                  <Cart />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/librarian"
-              element={
-                <LibrarianRoute>
-                  <LibrarianDashboard />
-                </LibrarianRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              }
-            />
-                <Route
-                  path="/profile"
-                  element={
-                    <PrivateRoute>
-                      <Profile />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/reservations"
-                  element={
-                    <PrivateRoute>
-                      <Reservations />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/loans"
-                  element={
-                    <PrivateRoute>
-                      <Loans />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/update-password"
-                  element={
-                    <PrivateRoute>
-                      <UpdatePassword />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/verify-code"
-                  element={
-                    <PrivateRoute>
-                      <VerifyCode />
-                    </PrivateRoute>
-                  }
-                />
+                    {/* Routes protégées */}
+                    <Route
+                      path="/cart"
+                      element={
+                        <PrivateRoute>
+                          <Cart />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/librarian"
+                      element={
+                        <LibrarianRoute>
+                          <LibrarianDashboard />
+                        </LibrarianRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin"
+                      element={
+                        <AdminRoute>
+                          <AdminDashboard />
+                        </AdminRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <PrivateRoute>
+                          <Profile />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/reservations"
+                      element={
+                        <PrivateRoute>
+                          <Reservations />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/loans"
+                      element={
+                        <PrivateRoute>
+                          <Loans />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/update-password"
+                      element={
+                        <PrivateRoute>
+                          <UpdatePassword />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/verify-code"
+                      element={
+                        <PrivateRoute>
+                          <VerifyCode />
+                        </PrivateRoute>
+                      }
+                    />
 
-                {/* Redirection par défaut */}
-                <Route path="*" element={<Navigate to="/accueil" />} />
-              </Routes>
-            </div>
-            <Footer />
-            <Chatbot />
-          </div>
-        </PasswordExpirationGuard>
-      </Router>
-    </CartProvider>
-    </AuthProvider>
+                    {/* Redirection par défaut */}
+                    <Route path="*" element={<Navigate to="/accueil" />} />
+                  </Routes>
+                </div>
+                <Footer />
+                <Chatbot />
+              </div>
+              </PasswordExpirationGuard>
+            </Router>
+        </CartProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

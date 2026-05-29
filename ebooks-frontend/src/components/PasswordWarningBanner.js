@@ -1,6 +1,7 @@
 // components/PasswordWarningBanner.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { authService } from '../services/authService';
 import './PasswordWarningBanner.css';
 
 /**
@@ -14,42 +15,25 @@ export const PasswordWarningBanner = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        console.log('🔔 PasswordWarningBanner - Vérification du statut...');
-        const response = await fetch('http://localhost:8080/api/auth/password-status', {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          console.log('❌ Banner - Réponse pas OK:', response.status);
-          return;
-        }
-        
-        const data = await response.json();
-        console.log('📊 Banner - Données reçues:', data);
+        const data = await authService.passwordStatus();
 
         // Afficher seulement si avertissement (pas si expiré, car redirection)
         if (data.warning && !data.expired) {
-          console.log('⚠️ Banner - Warning détecté !');
           setWarning(data);
           
           // Vérifier si l'utilisateur a déjà fermé la bannière aujourd'hui
           const dismissedDate = localStorage.getItem('passwordWarningDismissed');
           const today = new Date().toDateString();
           
-          console.log('📅 Banner - Date dismissée:', dismissedDate);
-          console.log('📅 Banner - Aujourd\'hui:', today);
-          
-          if (dismissedDate !== today) {
-            console.log('✅ Banner - Affichage de la bannière');
-            setVisible(true);
-          } else {
-            console.log('❌ Banner - Bannière déjà fermée aujourd\'hui');
+          if (dismissedDate === today) {
+            // Bannière déjà fermée aujourd'hui, ne pas afficher
+            return;
           }
-        } else {
-          console.log('ℹ️ Banner - Pas de warning (expired:', data.expired, ', warning:', data.warning, ')');
+          setVisible(true);
         }
       } catch (error) {
-        console.error('❌ Banner - Erreur:', error);
+        // Backend inaccessible ou non authentifié - ne pas afficher la bannière
+        console.error('Erreur lors de la vérification du statut mot de passe:', error.message);
       }
     };
 

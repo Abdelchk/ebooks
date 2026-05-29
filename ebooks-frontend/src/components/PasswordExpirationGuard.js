@@ -1,6 +1,7 @@
 // components/PasswordExpirationGuard.js
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 /**
  * Composant garde pour vérifier l'expiration du mot de passe
@@ -31,16 +32,7 @@ export const PasswordExpirationGuard = ({ children }) => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/auth/password-status', {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          // Si non authentifié, laisser le système d'auth gérer
-          return;
-        }
-
-        const data = await response.json();
+        const data = await authService.passwordStatus();
 
         if (data.expired) {
           // Bloquer l'accès et rediriger
