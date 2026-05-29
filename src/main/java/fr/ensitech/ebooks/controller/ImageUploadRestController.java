@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/rest/images")
 public class ImageUploadRestController {
 

@@ -3,7 +3,6 @@ package fr.ensitech.ebooks.controller;
 import fr.ensitech.ebooks.entity.SecurityQuestions;
 import fr.ensitech.ebooks.entity.User;
 import fr.ensitech.ebooks.entity.UserSecurityAnswer;
-import fr.ensitech.ebooks.repository.IUserRepository;
 import fr.ensitech.ebooks.service.IUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -22,12 +21,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.Optional;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequestMapping("/api/rest/users")
 public class UserController implements IUserController {
 
