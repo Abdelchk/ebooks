@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  * Filtre HTTP qui ajoute automatiquement les headers de version à chaque réponse.
  * Visible dans l'onglet Réseau du navigateur → En-têtes de réponse.
- *
+
  * X-Backend-Version: 1.2.3
  */
 @Component

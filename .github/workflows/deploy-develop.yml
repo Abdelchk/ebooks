@@ -26,18 +26,20 @@ jobs:
         with:
           ref: develop
 
+      - name: 📦 Installer Railway CLI
+        run: npm install -g @railway/cli@4.65.0 --ignore-scripts --no-audit --no-fund
+
       - name: 🚂 Déployer sur Railway
-        uses: berviantoleo/railway-deploy@main
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: ${{ secrets.RAILWAY_SERVICE_DEVELOP_ID }}
+        run: railway up --service "$RAILWAY_SERVICE_DEVELOP_ID" --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_DEVELOP_ID: ${{ secrets.RAILWAY_SERVICE_DEVELOP_ID }}
 
       - name: 📣 Résumé du déploiement
         run: |
-          echo "## ✅ Déploiement réussi !" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Déploiement lancé !" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Branche** : develop" >> $GITHUB_STEP_SUMMARY
           echo "- **Service Railway** : ebooks-develop" >> $GITHUB_STEP_SUMMARY
           echo "- **Déclenché par** : ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Date** : $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
-
