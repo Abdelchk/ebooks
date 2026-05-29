@@ -1,13 +1,18 @@
-import api from './api';
+import api, { invalidateCsrfToken } from './api';
 
 export const authService = {
   login: async (email, password) => {
     const response = await api.post('/api/auth/login', { email, password });
+    // Après le login, Spring Security régénère le token CSRF (nouvelle session).
+    // On invalide le cache pour forcer un nouveau fetch lors du prochain appel.
+    invalidateCsrfToken();
     return response.data;
   },
 
   logout: async () => {
     const response = await api.post('/api/auth/logout');
+    // Idem : la session est détruite, le token CSRF associé est invalidé.
+    invalidateCsrfToken();
     return response.data;
   },
 
