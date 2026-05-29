@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { bookService } from '../services/bookService';
 import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
+import { toArray } from '../utils/arrayUtils';
 import './Accueil.css';
 
 const Accueil = () => {
@@ -63,8 +64,9 @@ const Accueil = () => {
   const loadBooks = async () => {
     try {
       const data = await bookService.getAllBooks();
-      setBooks(data);
-      setFilteredBooks(data);
+      const books = toArray(data);
+      setBooks(books);
+      setFilteredBooks(books);
     } catch (err) {
       setError('Erreur lors du chargement des livres.');
       console.error(err);

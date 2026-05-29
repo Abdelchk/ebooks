@@ -5,6 +5,7 @@ import Navigation from '../components/Navbar';
 import Loader from '../components/Loader';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
+import { toArray } from '../utils/arrayUtils';
 import './Loans.css';
 
 const Loans = ({ embedded = false }) => {
@@ -42,7 +43,7 @@ const Loans = ({ embedded = false }) => {
   const loadLoans = async () => {
     try {
       const data = await loanService.getUserLoans();
-      setLoans(data);
+      setLoans(toArray(data));
     } catch (err) {
       setError('Erreur lors du chargement des emprunts');
       console.error(err);

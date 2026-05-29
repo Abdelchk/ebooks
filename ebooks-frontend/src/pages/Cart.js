@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import LoanDurationSelector from '../components/LoanDurationSelector';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { MODAL_TYPES, getModalConfig } from '../config/modalConfig';
+import { toArray } from '../utils/arrayUtils';
 import './Cart.css';
 
 const Cart = () => {
@@ -33,7 +34,7 @@ const Cart = () => {
   const loadCart = async () => {
     try {
       const data = await cartService.getCart();
-      setCartItems(data);
+      setCartItems(toArray(data));
     } catch (err) {
       setError('Erreur lors du chargement du panier');
       console.error(err);
