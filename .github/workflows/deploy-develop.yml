@@ -1,0 +1,45 @@
+name: 🚀 Deploy Develop → Railway
+
+# Déclenchement UNIQUEMENT manuel depuis l'onglet Actions de GitHub
+# → Bouton "Run workflow" → choisir la branche → Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Confirmer le déploiement de la branche develop sur Railway ?'
+        required: true
+        default: 'oui'
+        type: choice
+        options:
+          - oui
+          - non
+
+jobs:
+  deploy:
+    name: Deploy develop → Railway (ebooks-develop)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'oui' }}
+
+    steps:
+      - name: ✅ Checkout branche develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: 📦 Installer Railway CLI
+        run: npm install -g @railway/cli@4.65.0 --ignore-scripts --no-audit --no-fund
+
+      - name: 🚂 Déployer sur Railway
+        run: railway up --service "$RAILWAY_SERVICE_DEVELOP_ID" --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_DEVELOP_ID: ${{ secrets.RAILWAY_SERVICE_DEVELOP_ID }}
+
+      - name: 📣 Résumé du déploiement
+        run: |
+          echo "## ✅ Déploiement lancé !" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branche** : develop" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service Railway** : ebooks-develop" >> $GITHUB_STEP_SUMMARY
+          echo "- **Déclenché par** : ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date** : $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
