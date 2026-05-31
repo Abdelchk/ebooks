@@ -1,5 +1,5 @@
 import { authService } from './authService';
-import api from './api';
+import api, { invalidateCsrfToken } from './api';
 
 jest.mock('./api');
 
@@ -20,6 +20,15 @@ describe('authService', () => {
         expect(result.token).toBe('abc123');
     });
 
+    it('login invalide le cache CSRF après une connexion réussie', async () => {
+        api.post.mockResolvedValue({ data: { token: 'abc123' } });
+
+        await authService.login('test@test.com', 'Password123@');
+
+        // Le token CSRF doit être invalidé car Spring Security régénère la session après login
+        expect(invalidateCsrfToken).toHaveBeenCalledTimes(1);
+    });
+
     it('login propage les erreurs réseau', async () => {
         api.post.mockRejectedValue(new Error('Network Error'));
 
@@ -33,6 +42,15 @@ describe('authService', () => {
 
         expect(api.post).toHaveBeenCalledWith('/api/auth/logout');
         expect(result.message).toBe('Déconnecté');
+    });
+
+    it('logout invalide le cache CSRF après déconnexion', async () => {
+        api.post.mockResolvedValue({ data: { message: 'Déconnecté' } });
+
+        await authService.logout();
+
+        // La session est détruite → le token CSRF associé doit être invalidé
+        expect(invalidateCsrfToken).toHaveBeenCalledTimes(1);
     });
 
     it('register appelle POST /api/auth/register avec les données utilisateur', async () => {
