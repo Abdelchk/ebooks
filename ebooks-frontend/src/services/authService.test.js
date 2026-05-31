@@ -170,5 +170,15 @@ describe('authService', () => {
         });
         expect(result.message).toBe('Mot de passe mis à jour');
     });
+
+    it('passwordStatus appelle GET /api/auth/password-status', async () => {
+        api.get.mockResolvedValue({ data: { expired: false, daysUntilExpiration: 30 } });
+
+        const result = await authService.passwordStatus();
+
+        expect(api.get).toHaveBeenCalledWith('/api/auth/password-status');
+        expect(result.expired).toBe(false);
+        expect(result.daysUntilExpiration).toBe(30);
+    });
 });
 
