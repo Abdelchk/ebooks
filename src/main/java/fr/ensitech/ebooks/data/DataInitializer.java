@@ -86,11 +86,15 @@ public class DataInitializer {
                 user.setEnabled(true);
                 changed = true;
             }
-            if (!argon2.matches(config.rawPassword(), user.getPassword())) {
-                user.setPassword(argon2.encode(config.rawPassword()));
-                user.setLastPasswordUpdateDate(LocalDate.now());
-                changed = true;
-            }
+
+            // Toujours re-encoder le mot de passe au démarrage pour garantir que :
+            // 1. Le mot de passe correspond bien à la configuration actuelle
+            // 2. Le hash utilise les paramètres Argon2 les plus récents
+            // Note : on évite argon2.matches() (lent) — on re-encode directement.
+            String newHash = argon2.encode(config.rawPassword());
+            user.setPassword(newHash);
+            user.setLastPasswordUpdateDate(LocalDate.now());
+            changed = true;
 
             if (changed) {
                 userRepository.save(user);
