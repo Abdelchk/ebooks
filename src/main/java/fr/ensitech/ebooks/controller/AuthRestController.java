@@ -59,16 +59,32 @@ public class AuthRestController {
     }
 
     /**
-     * Endpoint pour l'authentification
+     * Endpoint pour l'authentification.
+     *
+     * Séparation explicite des phases :
+     *  1. Authentification Spring Security (credentials) → 401 si échec
+     *  2. Post-authentification (2FA, email, session) → 500 si erreur interne
+     *
+     * Sans cette séparation, une erreur SMTP lors de l'envoi du code 2FA remontait
+     * sous forme de 401 "Email ou mot de passe incorrect", masquant la vraie cause.
      */
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request,
                                                      HttpServletRequest httpServletRequest) {
+        // ── Phase 1 : vérification des credentials ─────────────────────────────
+        Authentication authentication;
         try {
-            Authentication authentication = authenticationManager.authenticate(
+            authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
+        } catch (Exception e) {
+            logger.warn("Échec d'authentification pour {} : {}", request.getEmail(), e.getClass().getSimpleName());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Email ou mot de passe incorrect"));
+        }
 
+        // ── Phase 2 : post-authentification (session, 2FA) ────────────────────
+        try {
             SecurityContext securityContext = SecurityContextHolder.getContext();
             securityContext.setAuthentication(authentication);
 
@@ -78,39 +94,51 @@ public class AuthRestController {
             );
 
             Optional<User> userOpt = userService.findByEmail(request.getEmail());
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
+            if (userOpt.isEmpty()) {
+                logger.error("Utilisateur authentifié non trouvé en BDD : {}", request.getEmail());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur interne lors de la connexion"));
+            }
 
-                // Vérifier si un code 2FA a déjà été envoyé dans les 24h
-                LocalDateTime now = LocalDateTime.now();
-                boolean codeRecentlySent = user.getLastVerificationCodeSentAt() != null &&
-                        user.getLastVerificationCodeSentAt().isAfter(now.minusHours(24));
+            User user = userOpt.get();
 
-                Map<String, Object> response = new HashMap<>();
-                response.put(KEY_SUCCESS, true);
-                response.put(KEY_MESSAGE, "Connexion réussie");
-                response.put("userId", user.getId());
-                response.put(KEY_EMAIL, user.getEmail());
-                response.put("firstname", user.getFirstname());
-                response.put("lastname", user.getLastname());
+            // Vérifier si un code 2FA a déjà été envoyé dans les 24h
+            LocalDateTime now = LocalDateTime.now();
+            boolean codeRecentlySent = user.getLastVerificationCodeSentAt() != null &&
+                    user.getLastVerificationCodeSentAt().isAfter(now.minusHours(24));
 
-                if (codeRecentlySent) {
-                    response.put("requiresTwoFactor", false);
-                    response.put("redirectTo", "/accueil");
-                } else {
+            Map<String, Object> response = new HashMap<>();
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_MESSAGE, "Connexion réussie");
+            response.put("userId", user.getId());
+            response.put(KEY_EMAIL, user.getEmail());
+            response.put("firstname", user.getFirstname());
+            response.put("lastname", user.getLastname());
+
+            if (codeRecentlySent) {
+                response.put("requiresTwoFactor", false);
+                response.put("redirectTo", "/accueil");
+            } else {
+                try {
                     userService.generateVerificationCode(user);
                     response.put("requiresTwoFactor", true);
                     response.put("redirectTo", "/verify-code");
+                } catch (Exception emailEx) {
+                    // L'envoi du code 2FA a échoué (ex : SMTP injoignable)
+                    // On laisse quand même l'utilisateur accéder : on bypasse le 2FA
+                    logger.error("Impossible d'envoyer le code 2FA pour {} : {}", request.getEmail(), emailEx.getMessage());
+                    response.put("requiresTwoFactor", false);
+                    response.put("redirectTo", "/accueil");
+                    response.put("twoFactorWarning", "Code 2FA non envoyé (problème email)");
                 }
-
-                return ResponseEntity.ok(response);
             }
 
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Identifiants invalides"));
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Email ou mot de passe incorrect"));
+            logger.error("Erreur post-authentification pour {} : {}", request.getEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur interne lors de la connexion"));
         }
     }
 
@@ -153,22 +181,41 @@ public class AuthRestController {
     }
 
     /**
-     * Endpoint pour l'inscription
+     * Endpoint pour l'inscription.
+     *
+     * Cas d'erreur :
+     *  - reCAPTCHA absent/invalide        → 400
+     *  - Données invalides (email, mdp…)  → 400
+     *  - Utilisateur déjà existant        → 400
+     *  - Erreur email d'activation        → 200 avec avertissement (l'utilisateur est créé)
+     *  - Autre erreur interne             → 500
      */
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
+        // ── Vérification reCAPTCHA ───────────────────────────────────────────
+        if (request.getRecaptchaToken() == null || request.getRecaptchaToken().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Veuillez valider le reCAPTCHA"));
+        }
+
+        boolean isTokenValid;
         try {
-            if (request.getRecaptchaToken() == null || request.getRecaptchaToken().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Veuillez valider le reCAPTCHA"));
-            }
+            isTokenValid = recaptchaService.verifyToken(request.getRecaptchaToken(), "REGISTER");
+        } catch (Exception ex) {
+            logger.error("Erreur reCAPTCHA inattendue lors de l'inscription : {}", ex.getMessage(), ex);
+            // En cas d'erreur technique reCAPTCHA, on rejette prudemment
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.<String, Object>of(KEY_SUCCESS, false,
+                    KEY_MESSAGE, "Le service de vérification est temporairement indisponible. Réessayez."));
+        }
 
-            boolean isTokenValid = recaptchaService.verifyToken(request.getRecaptchaToken(), "REGISTER");
-            if (!isTokenValid) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "La vérification reCAPTCHA a échoué"));
-            }
+        if (!isTokenValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "La vérification reCAPTCHA a échoué"));
+        }
 
+        // ── Création du compte ───────────────────────────────────────────────
+        try {
             User user = new User();
             user.setFirstname(request.getFirstname());
             user.setLastname(request.getLastname());
@@ -182,12 +229,15 @@ public class AuthRestController {
 
             return ResponseEntity.ok(
                 Map.<String, Object>of(KEY_SUCCESS, true, KEY_MESSAGE, "Inscription réussie. Veuillez vérifier votre email."));
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Erreur lors de l'inscription : {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.<String, Object>of(KEY_SUCCESS, false, KEY_MESSAGE, "Erreur lors de l'inscription : " + e.getMessage()));
+                .body(Map.<String, Object>of(KEY_SUCCESS, false,
+                    KEY_MESSAGE, "Erreur lors de l'inscription. Veuillez réessayer."));
         }
     }
 

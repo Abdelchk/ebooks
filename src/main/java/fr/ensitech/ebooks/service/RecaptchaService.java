@@ -99,7 +99,13 @@ public class RecaptchaService {
             return true;
 
         } catch (IOException e) {
-            logger.error("Erreur lors de la validation reCAPTCHA", e);
+            logger.error("Erreur I/O lors de la validation reCAPTCHA", e);
+            return false;
+        } catch (Exception e) {
+            // Le client gRPC Google peut lever ApiException (RuntimeException) ou d'autres
+            // exceptions non-IOException (ex : UnauthenticatedException, StatusRuntimeException)
+            // quand les credentials ne sont pas configurés ou que l'API est injoignable.
+            logger.error("Erreur inattendue lors de la validation reCAPTCHA : {}", e.getMessage(), e);
             return false;
         }
     }
