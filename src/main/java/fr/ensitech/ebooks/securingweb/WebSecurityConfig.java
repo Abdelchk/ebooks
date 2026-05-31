@@ -21,14 +21,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -99,25 +94,29 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        XorCsrfTokenRequestAttributeHandler requestHandler = new XorCsrfTokenRequestAttributeHandler();
-        // Spécifie au handler d'utiliser l'attribut "_csrf"
-        requestHandler.setCsrfRequestAttributeName("_csrf");
+        // Utilise un handler simple (sans XOR) adapté à HttpSessionCsrfTokenRepository.
+        // XorCsrfTokenRequestAttributeHandler était conçu pour CookieCsrfTokenRepository afin
+        // de prévenir l'attaque BREACH sur les cookies. Avec un repository de session côté
+        // serveur, ce mécanisme XOR n'est plus nécessaire ni souhaitable.
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+
+        // Protection CSRF via la session HTTP (côté serveur) :
+        // Avantage cross-origin : le token n'est PAS stocké dans un cookie XSRF-TOKEN
+        // (qui ne serait pas renvoyé par le navigateur en cross-origin sans SameSite=None).
+        // Le token est lié à la session, identifiée par le cookie JSESSIONID
+        // (déjà configuré SameSite=None;Secure en prod dans application-prod.properties).
+        // Le frontend récupère le token via GET /api/auth/csrf (JSON) et l'envoie
+        // dans l'en-tête X-XSRF-TOKEN sur toutes les requêtes d'écriture.
+        HttpSessionCsrfTokenRepository csrfRepository = new HttpSessionCsrfTokenRepository();
+        // Aligner le nom de l'en-tête avec la convention Axios (XSRF plutôt que CSRF)
+        csrfRepository.setHeaderName("X-XSRF-TOKEN");
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Activation et configuration de la protection CSRF pour notre SPA (Single Page Application).
-                // S3330 : HttpOnly=false est INTENTIONNEL et SÉCURISÉ dans ce contexte :
-                //   - Le cookie XSRF-TOKEN ne contient PAS de credential de session (il ne donne pas accès à lui seul).
-                //   - Il doit être lisible par JavaScript pour le pattern "Double Submit Cookie".
-                //   - En cross-origin (Vercel → backend), JS ne peut pas lire ce cookie ; on expose donc
-                //     aussi le token via GET /api/auth/csrf. Le cookie reste utile pour les environnements
-                //     same-origin (ex : développement local).
-                //   - Le cookie de session JSESSIONID (lui, sensible) reste toujours HttpOnly=true.
                 .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // NOSONAR java:S3330
+                    .csrfTokenRepository(csrfRepository)
                     .csrfTokenRequestHandler(requestHandler)
                 )
-                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/api/auth/**", "/api/rest/books/all", "/api/rest/books/*",
                             "/api/rest/books/search", "/api/rest/books/category/**").permitAll()
@@ -174,20 +173,4 @@ public class WebSecurityConfig {
         };
     }
 
-    /**
-     * Filtre de servlet pour garantir que le jeton CSRF est généré et stocké dans un cookie XSRF-TOKEN.
-     * C'est indispensable pour les SPA (React) afin que le premier appel GET (qui n'a pas besoin de CSRF en soi)
-     * reçoive le cookie CSRF nécéssaire pour valider les futurs appels POST/PUT/DELETE de modification.
-     */
-    private static class CsrfCookieFilter extends OncePerRequestFilter {
-        @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                throws ServletException, IOException {
-            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-            if (csrfToken != null) {
-                csrfToken.getToken(); // force la génération du token et l'écriture du cookie XSRF-TOKEN
-            }
-            filterChain.doFilter(request, response);
-        }
-    }
 }
