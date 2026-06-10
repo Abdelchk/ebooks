@@ -61,8 +61,9 @@ public class User {
 	@Pattern(regexp = "^\\+?\\d{10,15}$", message = "Le numéro de téléphone doit être valide !")
 	private String phoneNumber;
 	
+	@Builder.Default
 	@Column(length = 10, columnDefinition = "varchar(10) default 'client'")
-	private String role;
+	private String role = "client"; // valeur Java par défaut pour new User() ET User.builder().build()
 
     @Column(nullable = false)
     private boolean enabled;
@@ -71,8 +72,9 @@ public class User {
     private String verificationToken;
 
     // Historique des 5 derniers mots de passe (séparés par des espaces)
+    @Builder.Default
     @Column(length = 1500, columnDefinition = "varchar(1500) default ''")
-    private String passwordHistory;
+    private String passwordHistory = "";
 
     // Date de dernière mise à jour du mot de passe
     @Column

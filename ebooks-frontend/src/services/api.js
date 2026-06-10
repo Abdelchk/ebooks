@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// En développement local, on laisse l'URL vide : Axios utilise des URLs relatives,
+// le proxy CRA (package.json "proxy": "http://localhost:8080") intercepte les
+// requêtes /api/... et les transfère à localhost:8080.
+// Les cookies de session (JSESSIONID) sont alors posés pour localhost:3000 (same-origin)
+// → le CSRF fonctionne sans problème de SameSite/cross-origin.
+// En production, REACT_APP_API_URL est défini (Railway URL) → cross-origin avec CORS.
 const FRONTEND_VERSION = process.env.REACT_APP_VERSION || 'dev';
 
 // Configuration globale d'axios pour inclure les credentials (cookie de session)
