@@ -35,7 +35,9 @@
 		<!-- Patch CVE-2026-40477, CVE-2026-40478, CVE-2026-41901 (SSTI Thymeleaf) -->
 		<thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
 		<!-- Patch CVE-2024-7254 (protobuf DoS) transitif via recaptchaenterprise -->
-		<protobuf.version>3.25.5</protobuf.version>
+		<!-- DOIT être >= 4.33.2 : proto-google-cloud-recaptchaenterprise-v1-3.89.0 -->
+		<!-- a été compilé avec gencode 4.33.2 (erreur si runtime < gencode) -->
+		<protobuf.version>4.33.2</protobuf.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -119,7 +121,7 @@
             <artifactId>argon2-jvm</artifactId>
             <version>2.11</version>
         </dependency>
-        <!-- Patch CVE-2024-7254 : forcer protobuf-java >= 3.25.5 (transitif recaptcha) -->
+        <!-- Patch CVE-2024-7254 : forcer protobuf-java >= 4.33.2 (transitif recaptcha, gencode 4.33.2 requis) -->
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
