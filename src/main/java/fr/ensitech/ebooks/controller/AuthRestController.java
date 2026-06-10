@@ -119,18 +119,14 @@ public class AuthRestController {
                 response.put("requiresTwoFactor", false);
                 response.put("redirectTo", "/accueil");
             } else {
-                try {
-                    userService.generateVerificationCode(user);
-                    response.put("requiresTwoFactor", true);
-                    response.put("redirectTo", "/verify-code");
-                } catch (Exception emailEx) {
-                    // L'envoi du code 2FA a échoué (ex : SMTP injoignable)
-                    // On laisse quand même l'utilisateur accéder : on bypasse le 2FA
-                    logger.error("Impossible d'envoyer le code 2FA pour {} : {}", request.getEmail(), emailEx.getMessage());
-                    response.put("requiresTwoFactor", false);
-                    response.put("redirectTo", "/accueil");
-                    response.put("twoFactorWarning", "Code 2FA non envoyé (problème email)");
-                }
+                // generateVerificationCode sauvegarde le code en BDD et déclenche l'email
+                // de façon ASYNCHRONE (EmailService.sendEmail est @Async).
+                // On n'a donc pas besoin de catcher une erreur d'envoi ici :
+                // si le SMTP échoue dans le thread async, seul le log est impacté.
+                // Le code est quand même en BDD → l'utilisateur peut demander un renvoi.
+                userService.generateVerificationCode(user);
+                response.put("requiresTwoFactor", true);
+                response.put("redirectTo", "/verify-code");
             }
 
             return ResponseEntity.ok(response);
