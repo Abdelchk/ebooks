@@ -107,12 +107,6 @@ public class RecaptchaService {
             // quand les credentials ne sont pas configurés ou que l'API est injoignable.
             logger.error("Erreur inattendue lors de la validation reCAPTCHA : {}", e.getMessage(), e);
             return false;
-        } catch (Error e) {
-            // Sécurité : NoClassDefFoundError / ExceptionInInitializerError si conflit
-            // de version protobuf (ex: protobuf-java 3.x au lieu de 4.x requis).
-            // Ne pas propager en 500 - logguer et laisser l'inscription continuer.
-            logger.error("Erreur critique lors de l'initialisation reCAPTCHA (conflit de dépendance ?) : {}", e.getMessage(), e);
-            return false;
         }
     }
 
